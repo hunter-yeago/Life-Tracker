@@ -1,95 +1,65 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { Head } from '@inertiajs/vue3';
+import { onMounted, ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import * as d3 from 'd3';
 
 interface Props {
-    workoutStats: {
-        totalWorkouts: number;
-        workoutsByDay: Array<{ date: string; count: number }>;
-        workoutsByType: Record<string, number>;
-        totalSets: number;
-        totalReps: number;
-    };
     nutritionStats: {
         totalCalories: number;
         totalProtein: number;
         totalCarbs: number;
         totalFat: number;
         caloriesByDay: Array<{ date: string; calories: number }>;
-        macrosByDay: Array<{ date: string; protein: number; carbs: number; fat: number }>;
         averageDailyCalories: number;
     };
-    recentActivity: {
-        workouts: Array<any>;
-        foods: Array<any>;
+    weightStats: {
+        weightByDay: Array<{ date: string; weight: number }>;
     };
+    currentMonth: string;
 }
 
 const props = defineProps<Props>();
 
-const workoutChart = ref<HTMLDivElement>();
 const calorieChart = ref<HTMLDivElement>();
+const weightChart = ref<HTMLDivElement>();
+
+const monthOptions = computed(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+            value: date.toISOString().slice(0, 7),
+            label: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+        });
+    }
+    return months;
+});
+
+function changeMonth(month: string) {
+    router.get('/dashboard', { month }, { preserveState: true });
+}
 
 onMounted(() => {
-    if (workoutChart.value && props.workoutStats.workoutsByDay.length > 0) {
-        createWorkoutChart();
-    }
     if (calorieChart.value && props.nutritionStats.caloriesByDay.length > 0) {
         createCalorieChart();
     }
+    if (weightChart.value && props.weightStats.weightByDay.length > 0) {
+        createWeightChart();
+    }
 });
-
-function createWorkoutChart() {
-    if (!workoutChart.value) return;
-    
-    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-    const width = 400 - margin.left - margin.right;
-    const height = 200 - margin.bottom - margin.top;
-
-    const svg = d3.select(workoutChart.value)
-        .append('svg')
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    const data = props.workoutStats.workoutsByDay;
-    
-    const x = d3.scaleBand()
-        .domain(data.map((d: any) => d.date))
-        .range([0, width])
-        .padding(0.1);
-
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(data, (d: any) => d.count) || 0])
-        .range([height, 0]);
-
-    svg.selectAll('.bar')
-        .data(data)
-        .enter().append('rect')
-        .attr('class', 'bar')
-        .attr('x', (d: any) => x(d.date) || 0)
-        .attr('width', x.bandwidth())
-        .attr('y', (d: any) => y(d.count))
-        .attr('height', (d: any) => height - y(d.count))
-        .attr('fill', '#3B82F6');
-
-    svg.append('g')
-        .attr('transform', `translate(0,${height})`)
-        .call(d3.axisBottom(x));
-
-    svg.append('g')
-        .call(d3.axisLeft(y));
-}
 
 function createCalorieChart() {
     if (!calorieChart.value) return;
     
-    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-    const width = 400 - margin.left - margin.right;
-    const height = 200 - margin.bottom - margin.top;
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+    const width = calorieChart.value.clientWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // Clear previous chart
+    d3.select(calorieChart.value).selectAll('*').remove();
 
     const svg = d3.select(calorieChart.value)
         .append('svg')
@@ -100,31 +70,163 @@ function createCalorieChart() {
 
     const data = props.nutritionStats.caloriesByDay;
     
-    const x = d3.scaleBand()
-        .domain(data.map((d: any) => d.date))
-        .range([0, width])
-        .padding(0.1);
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const formatDate = d3.timeFormat('%m/%d');
+    
+    const processedData = data.map(d => ({
+        date: parseDate(d.date)!,
+        calories: d.calories
+    })).filter(d => d.date !== null);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(processedData, d => d.date) as [Date, Date])
+        .range([0, width]);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(data, (d: any) => d.calories) || 0])
+        .domain([0, d3.max(processedData, d => d.calories) || 0])
         .range([height, 0]);
 
-    svg.selectAll('.bar')
-        .data(data)
-        .enter().append('rect')
-        .attr('class', 'bar')
-        .attr('x', (d: any) => x(d.date) || 0)
-        .attr('width', x.bandwidth())
-        .attr('y', (d: any) => y(d.calories))
-        .attr('height', (d: any) => height - y(d.calories))
+    // Create line generator
+    const line = d3.line<any>()
+        .x(d => x(d.date))
+        .y(d => y(d.calories))
+        .curve(d3.curveMonotoneX);
+
+    // Add the line
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', 'none')
+        .attr('stroke', '#10B981')
+        .attr('stroke-width', 2)
+        .attr('d', line);
+
+    // Add dots
+    svg.selectAll('.dot')
+        .data(processedData)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.date!))
+        .attr('cy', d => y(d.calories))
+        .attr('r', 4)
         .attr('fill', '#10B981');
 
+    // Add axes
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
-        .call(d3.axisBottom(x));
+        .call(d3.axisBottom(x).tickFormat(formatDate as any))
+        .selectAll('text')
+        .style('fill', 'white');
 
     svg.append('g')
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y))
+        .selectAll('text')
+        .style('fill', 'white');
+
+    // Style axis lines
+    svg.selectAll('.domain')
+        .style('stroke', 'white');
+    
+    svg.selectAll('.tick line')
+        .style('stroke', 'white');
+
+    // Add labels
+    svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 0 - margin.left)
+        .attr('x', 0 - (height / 2))
+        .attr('dy', '1em')
+        .style('text-anchor', 'middle')
+        .style('fill', 'white')
+        .text('Calories');
+}
+
+function createWeightChart() {
+    if (!weightChart.value) return;
+    
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+    const width = weightChart.value.clientWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // Clear previous chart
+    d3.select(weightChart.value).selectAll('*').remove();
+
+    const svg = d3.select(weightChart.value)
+        .append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const data = props.weightStats.weightByDay;
+    
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const formatDate = d3.timeFormat('%m/%d');
+    
+    const processedData = data.map(d => ({
+        date: parseDate(d.date)!,
+        weight: d.weight
+    })).filter(d => d.date !== null);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(processedData, d => d.date) as [Date, Date])
+        .range([0, width]);
+
+    const y = d3.scaleLinear()
+        .domain(d3.extent(processedData, d => d.weight) as [number, number])
+        .range([height, 0]);
+
+    // Create line generator
+    const line = d3.line<any>()
+        .x(d => x(d.date))
+        .y(d => y(d.weight))
+        .curve(d3.curveMonotoneX);
+
+    // Add the line
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', 'none')
+        .attr('stroke', '#3B82F6')
+        .attr('stroke-width', 2)
+        .attr('d', line);
+
+    // Add dots
+    svg.selectAll('.dot')
+        .data(processedData)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.date!))
+        .attr('cy', d => y(d.weight))
+        .attr('r', 4)
+        .attr('fill', '#3B82F6');
+
+    // Add axes
+    svg.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(formatDate as any))
+        .selectAll('text')
+        .style('fill', 'white');
+
+    svg.append('g')
+        .call(d3.axisLeft(y))
+        .selectAll('text')
+        .style('fill', 'white');
+
+    // Style axis lines
+    svg.selectAll('.domain')
+        .style('stroke', 'white');
+    
+    svg.selectAll('.tick line')
+        .style('stroke', 'white');
+
+    // Add labels
+    svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 0 - margin.left)
+        .attr('x', 0 - (height / 2))
+        .attr('dy', '1em')
+        .style('text-anchor', 'middle')
+        .style('fill', 'white')
+        .text('Weight (lbs)');
 }
 </script>
 
@@ -133,41 +235,26 @@ function createCalorieChart() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                Life Tracker Dashboard
-            </h2>
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    Life Tracker Dashboard
+                </h2>
+                <select 
+                    :value="currentMonth" 
+                    @change="changeMonth(($event.target as HTMLSelectElement).value)"
+                    class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                >
+                    <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                        {{ month.label }}
+                    </option>
+                </select>
+            </div>
         </template>
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <!-- Quick Actions -->
-                <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <Link
-                        href="/workouts/create"
-                        class="rounded-lg bg-blue-600 p-6 text-center text-white shadow-sm hover:bg-blue-700"
-                    >
-                        <h3 class="text-lg font-semibold">Log Workout</h3>
-                        <p class="text-sm opacity-90">Record your latest workout session</p>
-                    </Link>
-                    <Link
-                        href="/foods/create"
-                        class="rounded-lg bg-green-600 p-6 text-center text-white shadow-sm hover:bg-green-700"
-                    >
-                        <h3 class="text-lg font-semibold">Log Food</h3>
-                        <p class="text-sm opacity-90">Track what you've eaten</p>
-                    </Link>
-                </div>
-
                 <!-- Stats Cards -->
-                <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Workouts</h3>
-                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ workoutStats.totalWorkouts }}</p>
-                    </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sets</h3>
-                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ workoutStats.totalSets }}</p>
-                    </div>
+                <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Calories</h3>
                         <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.totalCalories) }}</p>
@@ -176,46 +263,31 @@ function createCalorieChart() {
                         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Daily Calories</h3>
                         <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.averageDailyCalories) }}</p>
                     </div>
+                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Weight</h3>
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">
+                            {{ weightStats.weightByDay.length > 0 ? Math.round(weightStats.weightByDay[weightStats.weightByDay.length - 1].weight * 10) / 10 : 'N/A' }} lbs
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Charts -->
-                <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Workouts by Day</h3>
-                        <div ref="workoutChart"></div>
-                    </div>
+                <div class="space-y-8">
+                    <!-- Calories Chart -->
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Calories by Day</h3>
-                        <div ref="calorieChart"></div>
+                        <div ref="calorieChart" class="w-full"></div>
+                        <div v-if="nutritionStats.caloriesByDay.length === 0" class="text-center text-gray-500 py-8">
+                            No calorie data for this month
+                        </div>
                     </div>
-                </div>
 
-                <!-- Recent Activity -->
-                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <!-- Weight Chart -->
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <div class="mb-4 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Workouts</h3>
-                            <Link href="/workouts" class="text-blue-600 hover:text-blue-800">View All</Link>
-                        </div>
-                        <div class="space-y-3">
-                            <div v-for="workout in recentActivity.workouts" :key="workout.id" class="flex justify-between">
-                                <span class="text-gray-600 dark:text-gray-300">{{ workout.workout_type.name }}</span>
-                                <span class="text-sm text-gray-500">{{ new Date(workout.performed_at).toLocaleDateString() }}</span>
-                            </div>
-                            <div v-if="recentActivity.workouts.length === 0" class="text-gray-500">No recent workouts</div>
-                        </div>
-                    </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <div class="mb-4 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Foods</h3>
-                            <Link href="/foods" class="text-green-600 hover:text-green-800">View All</Link>
-                        </div>
-                        <div class="space-y-3">
-                            <div v-for="food in recentActivity.foods" :key="food.id" class="flex justify-between">
-                                <span class="text-gray-600 dark:text-gray-300">{{ food.food_type.name }}</span>
-                                <span class="text-sm text-gray-500">{{ Math.round(food.total_calories) }} cal</span>
-                            </div>
-                            <div v-if="recentActivity.foods.length === 0" class="text-gray-500">No recent foods logged</div>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Weight by Day</h3>
+                        <div ref="weightChart" class="w-full"></div>
+                        <div v-if="weightStats.weightByDay.length === 0" class="text-center text-gray-500 py-8">
+                            No weight data for this month
                         </div>
                     </div>
                 </div>

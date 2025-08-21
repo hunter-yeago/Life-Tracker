@@ -12,69 +12,36 @@ class DashboardController extends Controller
     public function index(): Response
     {
         $user = auth()->user();
-        $thirtyDaysAgo = Carbon::now()->subDays(30);
+        $month = request('month', Carbon::now()->format('Y-m'));
+        $startOfMonth = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $endOfMonth = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
 
-        $workoutStats = $this->getWorkoutStats($user, $thirtyDaysAgo);
-        $nutritionStats = $this->getNutritionStats($user, $thirtyDaysAgo);
-        $recentActivity = $this->getRecentActivity($user);
+        $nutritionStats = $this->getNutritionStats($user, $startOfMonth, $endOfMonth);
+        $weightStats = $this->getWeightStats($user, $startOfMonth, $endOfMonth);
 
         return Inertia::render('Dashboard', [
-            'workoutStats' => $workoutStats,
             'nutritionStats' => $nutritionStats,
-            'recentActivity' => $recentActivity,
+            'weightStats' => $weightStats,
+            'currentMonth' => $month,
         ]);
     }
 
-    private function getWorkoutStats($user, $thirtyDaysAgo): array
-    {
-        $workouts = $user->workouts()
-            ->where('performed_at', '>=', $thirtyDaysAgo)
-            ->with('workoutType')
-            ->get();
 
-        $workoutsByDay = $user->workouts()
-            ->select(DB::raw('DATE(performed_at) as date'), DB::raw('COUNT(*) as count'))
-            ->where('performed_at', '>=', $thirtyDaysAgo)
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        $workoutsByType = $workouts->groupBy('workoutType.name')
-            ->map(fn ($group) => $group->count());
-
-        return [
-            'totalWorkouts' => $workouts->count(),
-            'workoutsByDay' => $workoutsByDay,
-            'workoutsByType' => $workoutsByType,
-            'totalSets' => $workouts->sum('sets'),
-            'totalReps' => $workouts->sum('reps'),
-        ];
-    }
-
-    private function getNutritionStats($user, $thirtyDaysAgo): array
+    private function getNutritionStats($user, $startOfMonth, $endOfMonth): array
     {
         $foods = $user->foods()
-            ->where('consumed_at', '>=', $thirtyDaysAgo)
+            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->get();
 
         $caloriesByDay = $user->foods()
             ->select(DB::raw('DATE(consumed_at) as date'), DB::raw('SUM(total_calories) as calories'))
-            ->where('consumed_at', '>=', $thirtyDaysAgo)
+            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        $macrosByDay = $user->foods()
-            ->select(
-                DB::raw('DATE(consumed_at) as date'),
-                DB::raw('SUM(total_protein) as protein'),
-                DB::raw('SUM(total_carbs) as carbs'),
-                DB::raw('SUM(total_fat) as fat')
-            )
-            ->where('consumed_at', '>=', $thirtyDaysAgo)
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        $daysInMonth = $startOfMonth->daysInMonth;
+        $averageCalories = $foods->count() > 0 ? round($foods->sum('total_calories') / $daysInMonth, 2) : 0;
 
         return [
             'totalCalories' => $foods->sum('total_calories'),
@@ -82,28 +49,22 @@ class DashboardController extends Controller
             'totalCarbs' => $foods->sum('total_carbs'),
             'totalFat' => $foods->sum('total_fat'),
             'caloriesByDay' => $caloriesByDay,
-            'macrosByDay' => $macrosByDay,
-            'averageDailyCalories' => round($foods->sum('total_calories') / 30, 2),
+            'averageDailyCalories' => $averageCalories,
         ];
     }
 
-    private function getRecentActivity($user): array
+    private function getWeightStats($user, $startOfMonth, $endOfMonth): array
     {
-        $recentWorkouts = $user->workouts()
-            ->with('workoutType')
-            ->latest('performed_at')
-            ->limit(5)
-            ->get();
-
-        $recentFoods = $user->foods()
-            ->with('foodType')
-            ->latest('consumed_at')
-            ->limit(5)
+        $weightData = $user->foods()
+            ->select(DB::raw('DATE(consumed_at) as date'), DB::raw('AVG(weight) as weight'))
+            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
+            ->whereNotNull('weight')
+            ->groupBy('date')
+            ->orderBy('date')
             ->get();
 
         return [
-            'workouts' => $recentWorkouts,
-            'foods' => $recentFoods,
+            'weightByDay' => $weightData,
         ];
     }
 }

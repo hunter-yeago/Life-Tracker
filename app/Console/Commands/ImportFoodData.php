@@ -188,6 +188,9 @@ class ImportFoodData extends Command
             }
         }
 
+        // Extract weight from data
+        $weight = $data['weight'] ?? null;
+
         // Handle different JSON structures
         if (isset($data['meals']) && is_array($data['meals'])) {
             // Your structure: {"date": "...", "meals": [...]}
@@ -208,18 +211,32 @@ class ImportFoodData extends Command
         }
 
         foreach ($foodData as $item) {
-            $processed = $this->processFoodItem($item, $date);
-            if ($processed) {
-                $items[] = $processed;
+            // Handle nested meal structure with items array
+            if (isset($item['items']) && is_array($item['items'])) {
+                // This is a meal object with nested items
+                foreach ($item['items'] as $nestedItem) {
+                    $processed = $this->processFoodItem($nestedItem, $date, $weight);
+                    if ($processed) {
+                        $items[] = $processed;
+                    } else {
+                        $errors[] = 'Failed to process nested item: '.json_encode($nestedItem);
+                    }
+                }
             } else {
-                $errors[] = 'Failed to process item: '.json_encode($item);
+                // This is a direct food item
+                $processed = $this->processFoodItem($item, $date, $weight);
+                if ($processed) {
+                    $items[] = $processed;
+                } else {
+                    $errors[] = 'Failed to process item: '.json_encode($item);
+                }
             }
         }
 
         return $items;
     }
 
-    private function processFoodItem(array $item, ?Carbon $date): ?array
+    private function processFoodItem(array $item, ?Carbon $date, ?float $weight = null): ?array
     {
         // Extract food name from your structure
         $name = $item['food'] ?? $item['product'] ?? $item['name'] ?? $item['food_name'] ?? $item['title'] ?? null;
@@ -266,6 +283,7 @@ class ImportFoodData extends Command
             'fat' => (float) $fat,
             'date' => $itemDate ?? $date ?? Carbon::now(),
             'notes' => $portion ? "Original portion: {$portion}" : null,
+            'weight' => $weight,
         ];
     }
 
@@ -352,6 +370,7 @@ class ImportFoodData extends Command
             'total_fat' => $item['fat'],
             'notes' => $item['notes'],
             'consumed_at' => $item['date'],
+            'weight' => $item['weight'],
         ]);
 
         return ['created_food_type' => $createdFoodType];

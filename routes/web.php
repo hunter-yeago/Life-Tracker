@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FoodController;
+use App\Http\Controllers\FoodTypeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkoutController;
 use Illuminate\Foundation\Application;
@@ -28,6 +29,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('workouts', WorkoutController::class);
     Route::resource('foods', FoodController::class);
+    Route::resource('food-types', FoodTypeController::class)->except(['create', 'store']);
 });
 
 require __DIR__.'/auth.php';

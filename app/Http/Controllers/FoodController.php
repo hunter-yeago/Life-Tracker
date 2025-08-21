@@ -5,21 +5,70 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFoodRequest;
 use App\Models\Food;
 use App\Models\FoodType;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class FoodController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $selectedDate = $request->get('date', Carbon::now()->format('Y-m-d'));
+        $selectedMonth = $request->get('month', Carbon::now()->format('Y-m'));
+        
+        // Parse the selected date
+        $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
+        
+        // Get food entries for the selected day
         $foods = auth()->user()->foods()
             ->with('foodType')
-            ->latest('consumed_at')
-            ->paginate(15);
+            ->whereDate('consumed_at', $date)
+            ->orderBy('consumed_at', 'asc')
+            ->get();
+
+        // Get daily totals
+        $dailyTotals = auth()->user()->foods()
+            ->whereDate('consumed_at', $date)
+            ->selectRaw('
+                SUM(total_calories) as calories,
+                SUM(total_protein) as protein,
+                SUM(total_carbs) as carbs,
+                SUM(total_fat) as fat
+            ')
+            ->first();
+
+        // Get available dates for the selected month
+        $startOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $endOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
+        
+        $availableDates = auth()->user()->foods()
+            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
+            ->selectRaw('DATE(consumed_at) as date')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->pluck('date')
+            ->toArray();
+
+        // Generate month options (last 12 months)
+        $monthOptions = collect();
+        for ($i = 0; $i < 12; $i++) {
+            $monthDate = Carbon::now()->subMonths($i);
+            $monthOptions->push([
+                'value' => $monthDate->format('Y-m'),
+                'label' => $monthDate->format('F Y')
+            ]);
+        }
 
         return Inertia::render('Foods/Index', [
             'foods' => $foods,
+            'dailyTotals' => $dailyTotals,
+            'selectedDate' => $selectedDate,
+            'selectedMonth' => $selectedMonth,
+            'availableDates' => $availableDates,
+            'monthOptions' => $monthOptions,
         ]);
     }
 

@@ -21,6 +21,7 @@ class Food extends Model
         'total_fat',
         'notes',
         'consumed_at',
+        'weight',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class Food extends Model
             'total_carbs' => 'decimal:2',
             'total_fat' => 'decimal:2',
             'consumed_at' => 'datetime',
+            'weight' => 'decimal:1',
         ];
     }
 
