@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/usr/local/Cellar/php/8.4.1_1/bin/php",
+            "args": [
+                "/Users/hyeago/Documents/h-utils/life-tracker/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
