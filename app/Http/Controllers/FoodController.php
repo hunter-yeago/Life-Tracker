@@ -8,7 +8,6 @@ use App\Models\FoodType;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,10 +17,10 @@ class FoodController extends Controller
     {
         $selectedDate = $request->get('date', Carbon::now()->format('Y-m-d'));
         $selectedMonth = $request->get('month', Carbon::now()->format('Y-m'));
-        
+
         // Parse the selected date
         $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
-        
+
         // Get food entries for the selected day
         $foods = auth()->user()->foods()
             ->with('foodType')
@@ -43,7 +42,7 @@ class FoodController extends Controller
         // Get available dates for the selected month
         $startOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
         $endOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
-        
+
         $availableDates = auth()->user()->foods()
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->selectRaw('DATE(consumed_at) as date')
@@ -58,7 +57,7 @@ class FoodController extends Controller
             $monthDate = Carbon::now()->subMonths($i);
             $monthOptions->push([
                 'value' => $monthDate->format('Y-m'),
-                'label' => $monthDate->format('F Y')
+                'label' => $monthDate->format('F Y'),
             ]);
         }
 
@@ -72,28 +71,56 @@ class FoodController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        $foodTypes = FoodType::all();
+        $selectedDate = $request->get('date', Carbon::now()->format('Y-m-d'));
+
+        // Parse the selected date
+        $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
+
+        $foodTypes = FoodType::regularItems()->get();
+
+        // Get food entries for the selected day
+        $foods = auth()->user()->foods()
+            ->with('foodType')
+            ->whereDate('consumed_at', $date)
+            ->orderBy('consumed_at', 'asc')
+            ->get();
+
+        // Get daily totals
+        $dailyTotals = auth()->user()->foods()
+            ->whereDate('consumed_at', $date)
+            ->selectRaw('
+                SUM(total_calories) as calories,
+                SUM(total_protein) as protein,
+                SUM(total_carbs) as carbs,
+                SUM(total_fat) as fat
+            ')
+            ->first();
 
         return Inertia::render('Foods/Create', [
             'foodTypes' => $foodTypes,
+            'selectedDate' => $selectedDate,
+            'foods' => $foods,
+            'dailyTotals' => $dailyTotals,
         ]);
     }
 
     public function store(StoreFoodRequest $request): RedirectResponse
     {
         $foodType = FoodType::findOrFail($request->food_type_id);
-        $quantityGrams = $request->quantity_grams;
+        $servings = $request->servings;
 
-        $totalCalories = ($foodType->calories_per_100g * $quantityGrams) / 100;
-        $totalProtein = ($foodType->protein_per_100g * $quantityGrams) / 100;
-        $totalCarbs = ($foodType->carbs_per_100g * $quantityGrams) / 100;
-        $totalFat = ($foodType->fat_per_100g * $quantityGrams) / 100;
+        // Calculate nutrition based on servings
+        $totalCalories = $foodType->calories_per_serving * $servings;
+        $totalProtein = $foodType->protein_per_serving * $servings;
+        $totalCarbs = $foodType->carbs_per_serving * $servings;
+        $totalFat = $foodType->fat_per_serving * $servings;
 
         auth()->user()->foods()->create([
             'food_type_id' => $request->food_type_id,
-            'quantity_grams' => $quantityGrams,
+            'servings' => $servings,
+            'quantity_grams' => null,
             'total_calories' => $totalCalories,
             'total_protein' => $totalProtein,
             'total_carbs' => $totalCarbs,
@@ -102,13 +129,18 @@ class FoodController extends Controller
             'consumed_at' => $request->consumed_at,
         ]);
 
-        return redirect()->route('foods.index')
+        $consumedDate = Carbon::parse($request->consumed_at)->format('Y-m-d');
+
+        return redirect()->route('foods.create', ['date' => $consumedDate])
             ->with('success', 'Food intake logged successfully!');
     }
 
     public function show(Food $food): Response
     {
-        $this->authorize('view', $food);
+        // Only show foods belonging to the authenticated user
+        if ($food->user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $food->load('foodType');
 
@@ -119,50 +151,65 @@ class FoodController extends Controller
 
     public function edit(Food $food): Response
     {
-        $this->authorize('update', $food);
+        // Only edit foods belonging to the authenticated user
+        if ($food->user_id !== auth()->id()) {
+            abort(403);
+        }
 
-        $foodTypes = FoodType::all();
-
+        $food->load('foodType');
+        
         return Inertia::render('Foods/Edit', [
             'food' => $food,
-            'foodTypes' => $foodTypes,
         ]);
     }
 
-    public function update(StoreFoodRequest $request, Food $food): RedirectResponse
+    public function update(Request $request, Food $food): RedirectResponse
     {
-        $this->authorize('update', $food);
+        // Only update foods belonging to the authenticated user
+        if ($food->user_id !== auth()->id()) {
+            abort(403);
+        }
 
-        $foodType = FoodType::findOrFail($request->food_type_id);
-        $quantityGrams = $request->quantity_grams;
+        $request->validate([
+            'servings' => ['required', 'numeric', 'min:0.01'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
 
-        $totalCalories = ($foodType->calories_per_100g * $quantityGrams) / 100;
-        $totalProtein = ($foodType->protein_per_100g * $quantityGrams) / 100;
-        $totalCarbs = ($foodType->carbs_per_100g * $quantityGrams) / 100;
-        $totalFat = ($foodType->fat_per_100g * $quantityGrams) / 100;
+        $servings = $request->servings;
+        $foodType = $food->foodType;
+
+        // Calculate nutrition based on new servings
+        $totalCalories = $foodType->calories_per_serving * $servings;
+        $totalProtein = $foodType->protein_per_serving * $servings;
+        $totalCarbs = $foodType->carbs_per_serving * $servings;
+        $totalFat = $foodType->fat_per_serving * $servings;
 
         $food->update([
-            'food_type_id' => $request->food_type_id,
-            'quantity_grams' => $quantityGrams,
+            'servings' => $servings,
             'total_calories' => $totalCalories,
             'total_protein' => $totalProtein,
             'total_carbs' => $totalCarbs,
             'total_fat' => $totalFat,
             'notes' => $request->notes,
-            'consumed_at' => $request->consumed_at,
         ]);
 
-        return redirect()->route('foods.index')
-            ->with('success', 'Food intake updated successfully!');
+        $consumedDate = Carbon::parse($food->consumed_at)->format('Y-m-d');
+
+        return redirect()->route('foods.create', ['date' => $consumedDate])
+            ->with('success', 'Food entry updated successfully!');
     }
 
     public function destroy(Food $food): RedirectResponse
     {
-        $this->authorize('delete', $food);
+        // Only delete foods belonging to the authenticated user
+        if ($food->user_id !== auth()->id()) {
+            abort(403);
+        }
 
+        $consumedDate = Carbon::parse($food->consumed_at)->format('Y-m-d');
         $food->delete();
 
-        return redirect()->route('foods.index')
-            ->with('success', 'Food intake deleted successfully!');
+        return redirect()->route('foods.create', ['date' => $consumedDate])
+            ->with('success', 'Food entry deleted successfully!');
     }
 }

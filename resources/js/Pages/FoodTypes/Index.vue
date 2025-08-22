@@ -14,19 +14,23 @@ interface FoodType {
     id: number;
     name: string;
     description: string;
-    calories_per_100g: number;
-    protein_per_100g: number;
-    carbs_per_100g: number;
-    fat_per_100g: number;
+    serving_size?: string;
+    serving_weight_grams?: number;
+    calories_per_serving: number;
+    protein_per_serving: number;
+    carbs_per_serving: number;
+    fat_per_serving: number;
     category: string;
+    is_one_time_item: boolean;
 }
 
 interface Props {
-    foodTypes: {
+    regularFoodTypes: {
         data: FoodType[];
         links: any[];
         meta: any;
     };
+    oneTimeFoodTypes: FoodType[];
     search: string;
 }
 
@@ -40,11 +44,14 @@ const showDeleteModal = ref(false);
 const editForm = useForm({
     name: '',
     description: '',
-    calories_per_100g: '0',
-    protein_per_100g: '0',
-    carbs_per_100g: '0',
-    fat_per_100g: '0',
+    serving_size: '',
+    serving_weight_grams: '0',
+    calories_per_serving: '0',
+    protein_per_serving: '0',
+    carbs_per_serving: '0',
+    fat_per_serving: '0',
     category: '',
+    is_one_time_item: false,
 });
 
 function searchFoodTypes() {
@@ -102,11 +109,21 @@ function closeModal() {
     editForm.reset();
 }
 
-const filteredFoodTypes = computed(() => {
-    if (!searchQuery.value) return props.foodTypes.data;
+const filteredRegularFoodTypes = computed(() => {
+    if (!searchQuery.value) return props.regularFoodTypes.data;
     
     const query = searchQuery.value.toLowerCase();
-    return props.foodTypes.data.filter(foodType => 
+    return props.regularFoodTypes.data.filter(foodType => 
+        foodType.name.toLowerCase().includes(query) ||
+        (foodType.description && foodType.description.toLowerCase().includes(query))
+    );
+});
+
+const filteredOneTimeFoodTypes = computed(() => {
+    if (!searchQuery.value) return props.oneTimeFoodTypes;
+    
+    const query = searchQuery.value.toLowerCase();
+    return props.oneTimeFoodTypes.filter(foodType => 
         foodType.name.toLowerCase().includes(query) ||
         (foodType.description && foodType.description.toLowerCase().includes(query))
     );
@@ -145,11 +162,11 @@ const filteredFoodTypes = computed(() => {
                     <div class="lg:col-span-1">
                         <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                             <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                                Food Types ({{ filteredFoodTypes.length }})
+                                Regular Food Types ({{ filteredRegularFoodTypes.length }})
                             </h3>
                             <div class="space-y-2 max-h-96 overflow-y-auto">
                                 <div
-                                    v-for="foodType in filteredFoodTypes"
+                                    v-for="foodType in filteredRegularFoodTypes"
                                     :key="foodType.id"
                                     class="cursor-pointer rounded-lg border p-3 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
                                     :class="{ 'border-blue-500 bg-blue-50 dark:bg-blue-900': selectedFoodType?.id === foodType.id }"
@@ -159,10 +176,10 @@ const filteredFoodTypes = computed(() => {
                                         {{ foodType.name }}
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ Math.round(foodType.calories_per_100g) }} cal/100g
+                                        {{ Math.round(foodType.calories_per_serving) }} cal/{{ foodType.serving_size || 'serving' }}
                                     </div>
                                 </div>
-                                <div v-if="filteredFoodTypes.length === 0" class="text-center text-gray-500 py-4">
+                                <div v-if="filteredRegularFoodTypes.length === 0" class="text-center text-gray-500 py-4">
                                     No food types found
                                 </div>
                             </div>
@@ -239,6 +256,37 @@ const filteredFoodTypes = computed(() => {
                             </div>
                             <div v-else class="text-center text-gray-500 py-8">
                                 Select a food type to view details
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- One-Time Items Section -->
+                <div v-if="filteredOneTimeFoodTypes.length > 0" class="mt-8">
+                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+                            One-Time Items ({{ filteredOneTimeFoodTypes.length }})
+                        </h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            These are specific meal items that were logged once and are not available for reuse in new food entries.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div
+                                v-for="foodType in filteredOneTimeFoodTypes"
+                                :key="foodType.id"
+                                class="cursor-pointer rounded-lg border p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+                                :class="{ 'border-blue-500 bg-blue-50 dark:bg-blue-900': selectedFoodType?.id === foodType.id }"
+                                @click="viewFoodType(foodType)"
+                            >
+                                <div class="font-medium text-gray-900 dark:text-white mb-1">
+                                    {{ foodType.name }}
+                                </div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                    {{ Math.round(foodType.calories_per_serving) }} cal/{{ foodType.serving_size || 'serving' }}
+                                </div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500">
+                                    {{ foodType.category || 'No category' }}
+                                </div>
                             </div>
                         </div>
                     </div>

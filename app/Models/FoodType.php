@@ -14,25 +14,40 @@ class FoodType extends Model
     protected $fillable = [
         'name',
         'description',
-        'calories_per_100g',
-        'protein_per_100g',
-        'carbs_per_100g',
-        'fat_per_100g',
+        'serving_size',
+        'serving_weight_grams',
+        'calories_per_serving',
+        'protein_per_serving',
+        'carbs_per_serving',
+        'fat_per_serving',
         'category',
+        'is_one_time_item',
     ];
 
     protected function casts(): array
     {
         return [
-            'calories_per_100g' => 'decimal:2',
-            'protein_per_100g' => 'decimal:2',
-            'carbs_per_100g' => 'decimal:2',
-            'fat_per_100g' => 'decimal:2',
+            'serving_weight_grams' => 'decimal:2',
+            'calories_per_serving' => 'decimal:2',
+            'protein_per_serving' => 'decimal:2',
+            'carbs_per_serving' => 'decimal:2',
+            'fat_per_serving' => 'decimal:2',
+            'is_one_time_item' => 'boolean',
         ];
     }
 
     public function foods(): HasMany
     {
         return $this->hasMany(Food::class);
+    }
+
+    public function scopeRegularItems($query)
+    {
+        return $query->where('is_one_time_item', false);
+    }
+
+    public function scopeOneTimeItems($query)
+    {
+        return $query->where('is_one_time_item', true);
     }
 }

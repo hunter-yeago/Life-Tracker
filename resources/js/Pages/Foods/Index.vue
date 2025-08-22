@@ -44,11 +44,11 @@ const props = defineProps<Props>();
 
 function changeMonth(month: string) {
     // When month changes, reset to first available date of that month
-    router.get('/foods', { month }, { preserveState: true });
+    router.get(route('foods.index'), { month }, { preserveState: true });
 }
 
 function changeDate(date: string) {
-    router.get('/foods', { 
+    router.get(route('foods.index'), { 
         month: props.selectedMonth, 
         date 
     }, { preserveState: true });
@@ -98,7 +98,7 @@ const groupedFoods = computed(() => {
                     Daily Food Log
                 </h2>
                 <Link
-                    href="/foods/create"
+                    :href="route('foods.create')"
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                 >
                     Log New Food
@@ -191,7 +191,7 @@ const groupedFoods = computed(() => {
                         <div v-if="foods.length === 0" class="text-center py-8">
                             <p class="text-gray-500 dark:text-gray-400">No food entries for this day.</p>
                             <Link
-                                href="/foods/create"
+                                :href="route('foods.create')"
                                 class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                             >
                                 Log Your First Meal
@@ -235,13 +235,13 @@ const groupedFoods = computed(() => {
                                         </div>
                                         <div class="mt-3 flex space-x-3">
                                             <Link
-                                                :href="`/foods/${food.id}`"
+                                                :href="route('foods.show', food.id)"
                                                 class="text-green-600 hover:text-green-800 text-sm font-medium"
                                             >
                                                 View
                                             </Link>
                                             <Link
-                                                :href="`/foods/${food.id}/edit`"
+                                                :href="route('foods.edit', food.id)"
                                                 class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                                             >
                                                 Edit

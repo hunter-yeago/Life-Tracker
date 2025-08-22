@@ -14,6 +14,7 @@ class Food extends Model
     protected $fillable = [
         'user_id',
         'food_type_id',
+        'servings',
         'quantity_grams',
         'total_calories',
         'total_protein',
@@ -27,6 +28,7 @@ class Food extends Model
     protected function casts(): array
     {
         return [
+            'servings' => 'decimal:2',
             'quantity_grams' => 'decimal:2',
             'total_calories' => 'decimal:2',
             'total_protein' => 'decimal:2',

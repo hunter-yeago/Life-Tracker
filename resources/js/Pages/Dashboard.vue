@@ -254,11 +254,7 @@ function createWeightChart() {
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <!-- Stats Cards -->
-                <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Calories</h3>
-                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.totalCalories) }}</p>
-                    </div>
+                <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Daily Calories</h3>
                         <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.averageDailyCalories) }}</p>

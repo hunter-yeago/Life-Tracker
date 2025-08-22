@@ -23,7 +23,7 @@ class StoreFoodRequest extends FormRequest
     {
         return [
             'food_type_id' => ['required', 'exists:food_types,id'],
-            'quantity_grams' => ['required', 'numeric', 'min:0.01'],
+            'servings' => ['required', 'numeric', 'min:0.01'],
             'consumed_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
@@ -34,8 +34,8 @@ class StoreFoodRequest extends FormRequest
         return [
             'food_type_id.required' => 'Please select a food type.',
             'food_type_id.exists' => 'The selected food type is invalid.',
-            'quantity_grams.required' => 'Please specify the quantity consumed.',
-            'quantity_grams.min' => 'Quantity must be greater than 0.',
+            'servings.required' => 'Please specify the number of servings.',
+            'servings.min' => 'Servings must be greater than 0.',
             'consumed_at.required' => 'Please specify when this food was consumed.',
         ];
     }

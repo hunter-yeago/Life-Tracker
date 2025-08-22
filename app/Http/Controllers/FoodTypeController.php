@@ -12,18 +12,27 @@ class FoodTypeController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->get('search');
-        
-        $foodTypes = FoodType::query()
+
+        $regularFoodTypes = FoodType::regularItems()
             ->when($search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             })
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
 
+        $oneTimeFoodTypes = FoodType::oneTimeItems()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('FoodTypes/Index', [
-            'foodTypes' => $foodTypes,
+            'regularFoodTypes' => $regularFoodTypes,
+            'oneTimeFoodTypes' => $oneTimeFoodTypes,
             'search' => $search,
         ]);
     }
@@ -40,11 +49,14 @@ class FoodTypeController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'calories_per_100g' => 'required|numeric|min:0',
-            'protein_per_100g' => 'required|numeric|min:0',
-            'carbs_per_100g' => 'required|numeric|min:0',
-            'fat_per_100g' => 'required|numeric|min:0',
+            'serving_size' => 'nullable|string|max:255',
+            'serving_weight_grams' => 'nullable|numeric|min:0',
+            'calories_per_serving' => 'required|numeric|min:0',
+            'protein_per_serving' => 'required|numeric|min:0',
+            'carbs_per_serving' => 'required|numeric|min:0',
+            'fat_per_serving' => 'required|numeric|min:0',
             'category' => 'nullable|string|max:255',
+            'is_one_time_item' => 'boolean',
         ]);
 
         $foodType->update($validated);
