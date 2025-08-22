@@ -44,6 +44,29 @@ class FoodTypeController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'calories_per_serving' => 'required|numeric|min:0',
+            'protein_per_serving' => 'required|numeric|min:0',
+            'carbs_per_serving' => 'required|numeric|min:0',
+            'fat_per_serving' => 'required|numeric|min:0',
+            'is_one_time_item' => 'boolean',
+        ]);
+
+        // Set defaults for fields not collected in the form but needed in the database
+        $validated['serving_size'] = '1 serving';
+        $validated['category'] = 'Food';
+
+        $foodType = FoodType::create($validated);
+
+        return redirect()->back()
+            ->with('success', 'Food type created successfully!')
+            ->with('newly_created_food_type_id', $foodType->id);
+    }
+
     public function update(Request $request, FoodType $foodType)
     {
         $validated = $request->validate([

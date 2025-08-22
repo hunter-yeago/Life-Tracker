@@ -29,7 +29,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('workouts', WorkoutController::class);
     Route::resource('foods', FoodController::class);
-    Route::resource('food-types', FoodTypeController::class)->except(['create', 'store']);
+    Route::resource('food-types', FoodTypeController::class)->except(['create']);
 });
 
 require __DIR__.'/auth.php';

@@ -105,6 +105,7 @@ class FoodController extends Controller
             'selectedDate' => $selectedDate,
             'foods' => $foods,
             'dailyTotals' => $dailyTotals,
+            'newlyCreatedFoodTypeId' => session('newly_created_food_type_id'),
         ]);
     }
 

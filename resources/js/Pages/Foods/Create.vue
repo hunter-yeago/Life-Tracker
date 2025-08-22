@@ -5,7 +5,7 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 
 interface FoodType {
     id: number;
@@ -55,6 +55,7 @@ interface Props {
     selectedDate: string;
     foods: Food[];
     dailyTotals: DailyTotals;
+    newlyCreatedFoodTypeId?: number;
 }
 
 const props = defineProps<Props>();
@@ -63,7 +64,7 @@ const selectedDate = ref(props.selectedDate);
 
 const form = useForm({
     food_type_id: '',
-    servings: '',
+    servings: '1',
     consumed_at: selectedDate.value,
     notes: '',
 });
@@ -81,10 +82,27 @@ const editForm = ref({
     servings: '',
     notes: ''
 });
+const showCreateFoodType = ref(false);
+const createFoodTypeForm = useForm({
+    name: '',
+    calories_per_serving: '',
+    protein_per_serving: '',
+    carbs_per_serving: '',
+    fat_per_serving: '',
+    description: '',
+    is_one_time_item: false,
+});
+
 
 const updateSelectedFoodType = () => {
-    const foodTypeId = parseInt(form.food_type_id);
-    selectedFoodType.value = props.foodTypes.find(ft => ft.id === foodTypeId) || null;
+    if (form.food_type_id === 'create-new') {
+        showCreateFoodType.value = true;
+        selectedFoodType.value = null;
+    } else {
+        const foodTypeId = parseInt(form.food_type_id);
+        selectedFoodType.value = props.foodTypes.find(ft => ft.id === foodTypeId) || null;
+        showCreateFoodType.value = false;
+    }
 };
 
 const startEditing = (food: Food) => {
@@ -134,14 +152,34 @@ const getEditedNutrition = (food: Food) => {
     };
 };
 
+const toggleCreateFoodType = () => {
+    showCreateFoodType.value = !showCreateFoodType.value;
+    if (!showCreateFoodType.value) {
+        createFoodTypeForm.reset();
+    }
+};
+
+const submitCreateFoodType = () => {
+    createFoodTypeForm.post(route('food-types.store'), {
+        onSuccess: () => {
+            createFoodTypeForm.reset();
+            showCreateFoodType.value = false;
+            // Reload page to get updated food types
+            router.reload();
+        },
+        onError: (errors) => {
+            console.error('Food type creation failed:', errors);
+        }
+    });
+};
+
 const estimatedNutrition = computed(() => {
     if (!selectedFoodType.value || !form.servings) {
         return null;
     }
 
     const multiplier = parseFloat(form.servings);
-    const servingLabel = selectedFoodType.value.serving_size || 'serving';
-    const displayQuantity = `${form.servings} ${servingLabel}${multiplier !== 1 ? 's' : ''}`;
+    const displayQuantity = `${form.servings} serving${multiplier !== 1 ? 's' : ''}`;
 
     return {
         displayQuantity,
@@ -186,27 +224,18 @@ const formattedDate = computed(() => {
     });
 });
 
-const groupedFoods = computed(() => {
-    const groups: { [key: string]: Food[] } = {};
-    
-    props.foods.forEach(food => {
-        const time = new Date(food.consumed_at).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-        
-        if (!groups[time]) {
-            groups[time] = [];
-        }
-        groups[time].push(food);
-    });
-    
-    return Object.entries(groups).sort((a, b) => {
-        const timeA = new Date(`2000-01-01 ${a[0]}`);
-        const timeB = new Date(`2000-01-01 ${b[0]}`);
-        return timeA.getTime() - timeB.getTime();
-    });
+
+// Helper function to display servings without unnecessary zeros
+const displayServings = (servings: number) => {
+    return servings % 1 === 0 ? servings.toString() : servings.toString();
+};
+
+// Auto-select newly created food type
+onMounted(() => {
+    if (props.newlyCreatedFoodTypeId) {
+        form.food_type_id = props.newlyCreatedFoodTypeId.toString();
+        updateSelectedFoodType();
+    }
 });
 </script>
 
@@ -282,8 +311,129 @@ const groupedFoods = computed(() => {
                     </div>
                 </div>
 
+                <!-- Create New Food Type Form (shown when "Create New Food" is selected) -->
+                <div v-if="showCreateFoodType" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-green-200 dark:border-green-700">
+                    <div class="p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">Create New Food Type</h3>
+                            <button
+                                @click="showCreateFoodType = false; form.food_type_id = ''"
+                                class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="submitCreateFoodType" class="space-y-4">
+                            <div>
+                                <InputLabel for="name" value="Food Name *" />
+                                <TextInput
+                                    id="name"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    v-model="createFoodTypeForm.name"
+                                    placeholder="e.g., Refried Beans"
+                                    required
+                                />
+                                <InputError class="mt-2" :message="createFoodTypeForm.errors.name" />
+                            </div>
+
+
+                            <div class="border-t pt-4">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                                    Nutrition Facts Per Serving
+                                </h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <InputLabel for="calories_per_serving" value="Calories *" />
+                                        <TextInput
+                                            id="calories_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="mt-1 block w-full"
+                                            v-model="createFoodTypeForm.calories_per_serving"
+                                            placeholder="e.g., 140"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.calories_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="protein_per_serving" value="Protein (g) *" />
+                                        <TextInput
+                                            id="protein_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="mt-1 block w-full"
+                                            v-model="createFoodTypeForm.protein_per_serving"
+                                            placeholder="e.g., 8"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.protein_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="carbs_per_serving" value="Carbs (g) *" />
+                                        <TextInput
+                                            id="carbs_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="mt-1 block w-full"
+                                            v-model="createFoodTypeForm.carbs_per_serving"
+                                            placeholder="e.g., 19"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.carbs_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="fat_per_serving" value="Fat (g) *" />
+                                        <TextInput
+                                            id="fat_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="mt-1 block w-full"
+                                            v-model="createFoodTypeForm.fat_per_serving"
+                                            placeholder="e.g., 4.5"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.fat_per_serving" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <InputLabel for="description" value="Description (optional)" />
+                                <textarea
+                                    id="description"
+                                    v-model="createFoodTypeForm.description"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    rows="2"
+                                    placeholder="Additional details about this food..."
+                                ></textarea>
+                                <InputError class="mt-2" :message="createFoodTypeForm.errors.description" />
+                            </div>
+
+                            <div class="flex items-center">
+                                <input
+                                    id="is_one_time_item"
+                                    type="checkbox"
+                                    v-model="createFoodTypeForm.is_one_time_item"
+                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                />
+                                <label for="is_one_time_item" class="ml-2 text-sm text-gray-900 dark:text-gray-300">
+                                    One-time item (won't appear in dropdown for future meals)
+                                </label>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <PrimaryButton :disabled="createFoodTypeForm.processing">
+                                    Create Food Type
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Add New Food Form -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div v-if="!showCreateFoodType" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                     <div class="p-6">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Food</h3>
                         <form @submit.prevent="submit" class="space-y-4">
@@ -295,11 +445,13 @@ const groupedFoods = computed(() => {
                                     @change="updateSelectedFoodType"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                 >
-                                    <option value="">Select a food type</option>
+                                    <option value="create-new">➕ Create New Food</option>
+                                    <option value="" v-if="foodTypes.length > 0">Select existing food type</option>
                                     <optgroup 
                                         v-for="category in [...new Set(foodTypes.map(ft => ft.category))]"
                                         :key="category"
                                         :label="category"
+                                        v-if="foodTypes.length > 0"
                                     >
                                         <option
                                             v-for="type in foodTypes.filter(ft => ft.category === category)"
@@ -313,35 +465,9 @@ const groupedFoods = computed(() => {
                                 <InputError class="mt-2" :message="form.errors.food_type_id" />
                             </div>
 
-                            <div v-if="selectedFoodType" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <h4 class="font-medium text-gray-900 dark:text-white mb-2">
-                                    Nutrition per {{ selectedFoodType.serving_size || 'serving' }}
-                                    <span v-if="selectedFoodType.serving_weight_grams" class="text-sm text-gray-500">
-                                        ({{ selectedFoodType.serving_weight_grams }}g)
-                                    </span>
-                                </h4>
-                                <div class="grid grid-cols-4 gap-4 text-sm">
-                                    <div class="text-center">
-                                        <div class="font-medium">{{ selectedFoodType.calories_per_serving }}cal</div>
-                                        <div class="text-gray-500">Calories</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium">{{ selectedFoodType.protein_per_serving }}g</div>
-                                        <div class="text-gray-500">Protein</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium">{{ selectedFoodType.carbs_per_serving }}g</div>
-                                        <div class="text-gray-500">Carbs</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-medium">{{ selectedFoodType.fat_per_serving }}g</div>
-                                        <div class="text-gray-500">Fat</div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div>
-                                <InputLabel for="servings" :value="`Servings ${selectedFoodType ? `(${selectedFoodType.serving_size || 'serving'})` : ''}`" />
+                            <div v-if="selectedFoodType">
+                                <InputLabel for="servings" value="Servings" />
                                 <TextInput
                                     id="servings"
                                     type="number"
@@ -357,7 +483,7 @@ const groupedFoods = computed(() => {
 
                             <div v-if="estimatedNutrition" class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                                 <h4 class="font-medium text-gray-900 dark:text-white mb-2">
-                                    Estimated Nutrition for {{ estimatedNutrition.displayQuantity }}
+                                    Nutrition for {{ estimatedNutrition.displayQuantity }}
                                 </h4>
                                 <div class="grid grid-cols-4 gap-4 text-sm">
                                     <div class="text-center">
@@ -387,8 +513,7 @@ const groupedFoods = computed(() => {
                                 </div>
                             </div>
 
-
-                            <div>
+                            <div v-if="selectedFoodType">
                                 <InputLabel for="notes" value="Notes (optional)" />
                                 <textarea
                                     id="notes"
@@ -400,10 +525,10 @@ const groupedFoods = computed(() => {
                                 <InputError class="mt-2" :message="form.errors.notes" />
                             </div>
 
-                            <div class="flex items-center justify-between">
+                            <div v-if="selectedFoodType" class="flex items-center justify-between">
                                 <button
                                     type="button"
-                                    @click="form.reset()"
+                                    @click="form.reset(); selectedFoodType = null"
                                     class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                                 >
                                     Clear Form
@@ -426,15 +551,12 @@ const groupedFoods = computed(() => {
                             <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">Add your first food above!</p>
                         </div>
 
-                        <div v-else class="space-y-6">
-                            <div v-for="[time, timeGroupFoods] in groupedFoods" :key="time" class="border-l-4 border-green-500 pl-4">
-                                <h5 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">{{ time }}</h5>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="food in timeGroupFoods"
-                                        :key="food.id"
-                                        class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
-                                    >
+                        <div v-else class="space-y-3">
+                            <div
+                                v-for="food in foods"
+                                :key="food.id"
+                                class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
                                         <!-- Regular Display Mode -->
                                         <div v-if="editingFoodId !== food.id">
                                             <div class="flex justify-between items-start">
@@ -446,7 +568,7 @@ const groupedFoods = computed(() => {
                                                         {{ food.food_type.category }}
                                                     </p>
                                                     <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                                        {{ food.servings }} {{ food.food_type.serving_size || 'serving' }}{{ food.servings !== 1 ? 's' : '' }}
+                                                        {{ displayServings(food.servings) }} serving{{ food.servings !== 1 ? 's' : '' }}
                                                     </p>
                                                     <p v-if="food.notes" class="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
                                                         {{ food.notes }}
@@ -495,9 +617,9 @@ const groupedFoods = computed(() => {
                                                         {{ getEditedNutrition(food).calories }} cal
                                                     </div>
                                                     <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        <span>P: {{ getEditedNutrition(food).protein }}g</span>
-                                                        <span>C: {{ getEditedNutrition(food).carbs }}g</span>
-                                                        <span>F: {{ getEditedNutrition(food).fat }}g</span>
+                                                        <span>Protein: {{ getEditedNutrition(food).protein }}g</span>
+                                                        <span>Carbs: {{ getEditedNutrition(food).carbs }}g</span>
+                                                        <span>Fat: {{ getEditedNutrition(food).fat }}g</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -505,7 +627,7 @@ const groupedFoods = computed(() => {
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 <div>
                                                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Servings ({{ food.food_type.serving_size || 'serving' }})
+                                                        Servings
                                                     </label>
                                                     <input
                                                         type="number"
@@ -543,11 +665,8 @@ const groupedFoods = computed(() => {
                                                     Save
                                                 </button>
                                             </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
-                        </div>
                     </div>
                 </div>
             </div>
