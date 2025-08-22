@@ -175,7 +175,9 @@ const deleteFood = (foodId: number) => {
 };
 
 const formattedDate = computed(() => {
-    const date = new Date(selectedDate.value);
+    // Parse the date as local time to avoid timezone issues
+    const [year, month, day] = selectedDate.value.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.toLocaleDateString('en-US', { 
         weekday: 'long',
         year: 'numeric', 
