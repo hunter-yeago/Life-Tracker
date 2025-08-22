@@ -82,7 +82,9 @@ class FoodController extends Controller
 
         // Get food entries for the selected day
         $foods = auth()->user()->foods()
-            ->with('foodType')
+            ->with(['foodType' => function ($query) {
+                $query->select('id', 'name', 'category', 'serving_size', 'calories_per_serving', 'protein_per_serving', 'carbs_per_serving', 'fat_per_serving');
+            }])
             ->whereDate('consumed_at', $date)
             ->orderBy('consumed_at', 'asc')
             ->get();
