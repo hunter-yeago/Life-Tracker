@@ -134,7 +134,11 @@ const saveEdit = (food: Food) => {
     }, {
         onSuccess: () => {
             editingFoodId.value = null;
-            router.reload();
+            router.reload({ 
+                only: ['foods', 'dailyTotals'],
+                preserveState: true,
+                preserveScroll: true 
+            });
         },
         onError: (errors) => {
             console.error('Update failed:', errors);
@@ -165,7 +169,11 @@ const submitCreateFoodType = () => {
             createFoodTypeForm.reset();
             showCreateFoodType.value = false;
             // Reload page to get updated food types
-            router.reload();
+            router.reload({ 
+                only: ['foodTypes'],
+                preserveState: true,
+                preserveScroll: true 
+            });
         },
         onError: (errors) => {
             console.error('Food type creation failed:', errors);
@@ -196,8 +204,12 @@ const submit = () => {
             // Reset form but keep the date
             form.reset('food_type_id', 'servings', 'notes');
             selectedFoodType.value = null;
-            // Reload page to show updated food list
-            router.reload();
+            // Refresh the page data without full reload
+            router.reload({ 
+                only: ['foods', 'dailyTotals'],
+                preserveState: true,
+                preserveScroll: true 
+            });
         }
     });
 };
@@ -206,7 +218,11 @@ const deleteFood = (foodId: number) => {
     if (confirm('Are you sure you want to delete this food entry?')) {
         router.delete(route('foods.destroy', foodId), {
             onSuccess: () => {
-                router.reload();
+                router.reload({ 
+                    only: ['foods', 'dailyTotals'],
+                    preserveState: true,
+                    preserveScroll: true 
+                });
             }
         });
     }

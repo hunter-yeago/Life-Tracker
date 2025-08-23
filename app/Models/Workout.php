@@ -17,8 +17,9 @@ class Workout extends Model
         'sets',
         'reps',
         'weight',
-        'duration_minutes',
         'distance',
+        'both_sides',
+        'difficulty',
         'notes',
         'performed_at',
     ];
@@ -28,6 +29,7 @@ class Workout extends Model
         return [
             'weight' => 'decimal:2',
             'distance' => 'decimal:2',
+            'both_sides' => 'boolean',
             'performed_at' => 'datetime',
         ];
     }

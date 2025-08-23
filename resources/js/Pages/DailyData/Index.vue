@@ -168,6 +168,15 @@ function submitWorkout() {
     });
 }
 
+function resetDay() {
+    if (confirm('Are you sure you want to reset ALL data for this day? This will delete all food and workout entries and cannot be undone.')) {
+        router.delete(route('daily-data.reset'), {
+            data: { date: props.selectedDate },
+            preserveScroll: true,
+        });
+    }
+}
+
 const selectedFoodType = computed(() => {
     if (!foodForm.food_type_id) return null;
     return props.foodTypes.find(ft => ft.id == Number(foodForm.food_type_id));
@@ -238,9 +247,19 @@ function getPhaseColor(phase: string) {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <!-- Date Header -->
                 <div class="text-center">
-                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">
                         {{ formattedDate }}
                     </h3>
+                    <button
+                        @click="resetDay"
+                        v-if="foods.length > 0 || workouts.length > 0"
+                        class="inline-flex items-center px-3 py-1 border border-red-300 text-sm leading-4 font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/30"
+                    >
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Reset Day
+                    </button>
                 </div>
 
                 <!-- Active Diet Period Section -->

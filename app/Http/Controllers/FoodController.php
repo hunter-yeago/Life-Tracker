@@ -89,14 +89,20 @@ class FoodController extends Controller
         // Parse the selected date
         $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
 
-        // Get regular food types
-        $foodTypes = FoodType::regularItems()->get();
+        // Get regular food types and unused one-time items
+        $foodTypes = FoodType::where(function ($query) {
+            $query->where('is_one_time_item', false)
+                ->orWhere(function ($subQuery) {
+                    $subQuery->where('is_one_time_item', true)
+                        ->whereDoesntHave('foods');
+                });
+        })->orderBy('name')->get();
 
-        // If there's a newly created food type, include it (even if it's a one-time item)
+        // If there's a newly created food type, make sure it's included (even if it would normally be filtered)
         $newlyCreatedFoodTypeId = session('newly_created_food_type_id');
         if ($newlyCreatedFoodTypeId) {
             $newlyCreatedFoodType = FoodType::find($newlyCreatedFoodTypeId);
-            if ($newlyCreatedFoodType && $newlyCreatedFoodType->is_one_time_item) {
+            if ($newlyCreatedFoodType && ! $foodTypes->contains('id', $newlyCreatedFoodType->id)) {
                 $foodTypes->push($newlyCreatedFoodType);
             }
         }

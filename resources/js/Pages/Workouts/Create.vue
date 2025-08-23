@@ -25,8 +25,9 @@ const form = useForm({
     sets: '',
     reps: '',
     weight: '',
-    duration_minutes: '',
     distance: '',
+    both_sides: true,
+    difficulty: '',
     notes: '',
     performed_at: new Date().toISOString().split('T')[0],
 });
@@ -96,31 +97,17 @@ const submit = () => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <InputLabel for="weight" value="Weight (kg)" />
-                                    <TextInput
-                                        id="weight"
-                                        type="number"
-                                        step="0.1"
-                                        class="mt-1 block w-full"
-                                        v-model="form.weight"
-                                        placeholder="e.g., 80.5"
-                                    />
-                                    <InputError class="mt-2" :message="form.errors.weight" />
-                                </div>
-
-                                <div>
-                                    <InputLabel for="duration_minutes" value="Duration (minutes)" />
-                                    <TextInput
-                                        id="duration_minutes"
-                                        type="number"
-                                        class="mt-1 block w-full"
-                                        v-model="form.duration_minutes"
-                                        placeholder="e.g., 30"
-                                    />
-                                    <InputError class="mt-2" :message="form.errors.duration_minutes" />
-                                </div>
+                            <div>
+                                <InputLabel for="weight" value="Weight (kg)" />
+                                <TextInput
+                                    id="weight"
+                                    type="number"
+                                    step="0.1"
+                                    class="mt-1 block w-full"
+                                    v-model="form.weight"
+                                    placeholder="e.g., 80.5"
+                                />
+                                <InputError class="mt-2" :message="form.errors.weight" />
                             </div>
 
                             <div>
@@ -134,6 +121,52 @@ const submit = () => {
                                     placeholder="e.g., 5.0"
                                 />
                                 <InputError class="mt-2" :message="form.errors.distance" />
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <InputLabel for="both_sides" value="Both Sides" />
+                                    <div class="mt-1 flex items-center space-x-6">
+                                        <label class="flex items-center">
+                                            <input 
+                                                type="radio" 
+                                                name="both_sides"
+                                                :value="true" 
+                                                v-model="form.both_sides"
+                                                class="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                            />
+                                            <span class="ml-2 text-sm text-gray-900 dark:text-gray-300">Both sides</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input 
+                                                type="radio" 
+                                                name="both_sides"
+                                                :value="false" 
+                                                v-model="form.both_sides"
+                                                class="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                            />
+                                            <span class="ml-2 text-sm text-gray-900 dark:text-gray-300">Left/Right separate</span>
+                                        </label>
+                                    </div>
+                                    <InputError class="mt-2" :message="form.errors.both_sides" />
+                                </div>
+
+                                <div>
+                                    <InputLabel for="difficulty" value="Difficulty" />
+                                    <select
+                                        id="difficulty"
+                                        v-model="form.difficulty"
+                                        class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    >
+                                        <option value="">Select difficulty (optional)</option>
+                                        <option value="easy">Easy</option>
+                                        <option value="hard">Hard</option>
+                                        <option value="really_hard">Really Hard</option>
+                                        <option value="almost_fail">Almost Fail</option>
+                                        <option value="fail">Fail</option>
+                                    </select>
+                                    <InputError class="mt-2" :message="form.errors.difficulty" />
+                                </div>
                             </div>
 
                             <div>

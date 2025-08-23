@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import * as d3 from 'd3';
 
@@ -61,6 +61,35 @@ onMounted(() => {
         createWeightChart();
     }
 });
+
+// Watch for changes to recreate charts when month changes
+watch(
+    () => props.nutritionStats.caloriesByDay,
+    () => {
+        if (calorieChart.value) {
+            if (props.nutritionStats.caloriesByDay.length > 0) {
+                createCalorieChart();
+            } else {
+                // Clear chart when no data
+                d3.select(calorieChart.value).selectAll('*').remove();
+            }
+        }
+    }
+);
+
+watch(
+    () => props.weightStats.weightByDay,
+    () => {
+        if (weightChart.value) {
+            if (props.weightStats.weightByDay.length > 0) {
+                createWeightChart();
+            } else {
+                // Clear chart when no data
+                d3.select(weightChart.value).selectAll('*').remove();
+            }
+        }
+    }
+);
 
 function createCalorieChart() {
     if (!calorieChart.value) return;

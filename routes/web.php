@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/daily-data', [DailyDataController::class, 'index'])->name('daily-data.index');
     Route::post('/daily-data/food', [DailyDataController::class, 'storeFood'])->name('daily-data.food');
     Route::post('/daily-data/workout', [DailyDataController::class, 'storeWorkout'])->name('daily-data.workout');
+    Route::delete('/daily-data/reset', [DailyDataController::class, 'resetDay'])->name('daily-data.reset');
 
     // Diet Periods (Historical Periods System)
     Route::get('/diet-periods', [DietPeriodController::class, 'index'])->name('diet-periods.index');

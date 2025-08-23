@@ -12,8 +12,9 @@ interface Workout {
     sets: number;
     reps: number;
     weight: number;
-    duration_minutes: number;
     distance: number;
+    both_sides: boolean;
+    difficulty: string;
     performed_at: string;
 }
 
@@ -85,11 +86,14 @@ defineProps<Props>();
                                         <div v-if="workout.weight" class="text-sm text-gray-600 dark:text-gray-300">
                                             {{ workout.weight }}kg
                                         </div>
-                                        <div v-if="workout.duration_minutes" class="text-sm text-gray-600 dark:text-gray-300">
-                                            {{ workout.duration_minutes }} minutes
-                                        </div>
                                         <div v-if="workout.distance" class="text-sm text-gray-600 dark:text-gray-300">
                                             {{ workout.distance }}km
+                                        </div>
+                                        <div v-if="workout.both_sides !== null" class="text-sm text-gray-600 dark:text-gray-300">
+                                            {{ workout.both_sides ? 'Both sides' : 'Left/Right separate' }}
+                                        </div>
+                                        <div v-if="workout.difficulty" class="text-sm text-gray-600 dark:text-gray-300">
+                                            Difficulty: {{ workout.difficulty.replace('_', ' ') }}
                                         </div>
                                     </div>
                                 </div>

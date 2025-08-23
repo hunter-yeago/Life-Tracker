@@ -44,7 +44,14 @@ class DailyDataController extends Controller
             ->get();
 
         // Get available food types for quick add
-        $foodTypes = FoodType::orderBy('name')->get();
+        // Exclude one-time items that have already been used
+        $foodTypes = FoodType::where(function ($query) {
+            $query->where('is_one_time_item', false)
+                ->orWhere(function ($subQuery) {
+                    $subQuery->where('is_one_time_item', true)
+                        ->whereDoesntHave('foods');
+                });
+        })->orderBy('name')->get();
 
         // Get available workout types
         $workoutTypes = WorkoutType::orderBy('name')->get();
@@ -119,5 +126,27 @@ class DailyDataController extends Controller
         ]);
 
         return back()->with('success', 'Workout logged successfully');
+    }
+
+    public function resetDay(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+        ]);
+
+        $date = $validated['date'];
+        $userId = auth()->id();
+
+        // Delete all foods for this date
+        Food::where('user_id', $userId)
+            ->whereDate('consumed_at', $date)
+            ->delete();
+
+        // Delete all workouts for this date
+        Workout::where('user_id', $userId)
+            ->whereDate('workout_date', $date)
+            ->delete();
+
+        return back()->with('success', 'All data for this day has been reset');
     }
 }

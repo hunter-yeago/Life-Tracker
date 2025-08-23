@@ -26,8 +26,9 @@ class StoreWorkoutRequest extends FormRequest
             'sets' => ['nullable', 'integer', 'min:1'],
             'reps' => ['nullable', 'integer', 'min:1'],
             'weight' => ['nullable', 'numeric', 'min:0'],
-            'duration_minutes' => ['nullable', 'integer', 'min:1'],
             'distance' => ['nullable', 'numeric', 'min:0'],
+            'both_sides' => ['boolean'],
+            'difficulty' => ['nullable', 'in:easy,hard,really_hard,almost_fail,fail'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'performed_at' => ['required', 'date'],
         ];
