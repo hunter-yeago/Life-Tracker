@@ -10,6 +10,7 @@ interface Food {
         name: string;
         category: string;
     };
+    servings: number;
     quantity_grams: number;
     total_calories: number;
     total_protein: number;
@@ -37,6 +38,7 @@ interface Props {
     selectedDate: string;
     selectedMonth: string;
     availableDates: string[];
+    datesWithData: string[];
     monthOptions: MonthOption[];
 }
 
@@ -64,26 +66,10 @@ const formattedDate = computed(() => {
     });
 });
 
-const groupedFoods = computed(() => {
-    const groups: { [key: string]: Food[] } = {};
-    
-    props.foods.forEach(food => {
-        const time = new Date(food.consumed_at).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-        
-        if (!groups[time]) {
-            groups[time] = [];
-        }
-        groups[time].push(food);
-    });
-    
-    return Object.entries(groups).sort((a, b) => {
-        const timeA = new Date(`2000-01-01 ${a[0]}`);
-        const timeB = new Date(`2000-01-01 ${b[0]}`);
-        return timeA.getTime() - timeB.getTime();
+// Sort foods by consumed_at time
+const sortedFoods = computed(() => {
+    return [...props.foods].sort((a, b) => {
+        return new Date(a.consumed_at).getTime() - new Date(b.consumed_at).getTime();
     });
 });
 </script>
@@ -98,7 +84,7 @@ const groupedFoods = computed(() => {
                     Daily Food Log
                 </h2>
                 <Link
-                    :href="route('foods.create')"
+                    :href="route('foods.create', { date: selectedDate })"
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                 >
                     Log New Food
@@ -139,6 +125,7 @@ const groupedFoods = computed(() => {
                             >
                                 <option v-for="date in availableDates" :key="date" :value="date">
                                     {{ new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+                                    {{ datesWithData.includes(date) ? '' : ' (no data)' }}
                                 </option>
                             </select>
                         </div>
@@ -191,65 +178,109 @@ const groupedFoods = computed(() => {
                         <div v-if="foods.length === 0" class="text-center py-8">
                             <p class="text-gray-500 dark:text-gray-400">No food entries for this day.</p>
                             <Link
-                                :href="route('foods.create')"
+                                :href="route('foods.create', { date: selectedDate })"
                                 class="mt-4 inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                             >
                                 Log Your First Meal
                             </Link>
                         </div>
 
-                        <div v-else class="space-y-6">
-                            <div v-for="[time, timeGroupFoods] in groupedFoods" :key="time" class="border-l-4 border-green-500 pl-4">
-                                <h5 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">{{ time }}</h5>
-                                <div class="space-y-3">
-                                    <div
-                                        v-for="food in timeGroupFoods"
-                                        :key="food.id"
-                                        class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
-                                    >
-                                        <div class="flex justify-between items-start">
-                                            <div class="flex-1">
-                                                <h6 class="font-medium text-gray-900 dark:text-white">
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Food Item
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Servings
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Calories
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Protein (g)
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Carbs (g)
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Fat (g)
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tr v-for="food in sortedFoods" :key="food.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        <td class="px-4 py-3">
+                                            <div>
+                                                <div class="font-medium text-gray-900 dark:text-white">
                                                     {{ food.food_type.name }}
-                                                </h6>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                </div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400">
                                                     {{ food.food_type.category }}
-                                                </p>
-                                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                                    {{ food.quantity_grams }}g
-                                                </p>
-                                                <p v-if="food.notes" class="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
+                                                </div>
+                                                <div v-if="food.notes" class="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
                                                     {{ food.notes }}
-                                                </p>
-                                            </div>
-                                            <div class="text-right ml-4">
-                                                <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                                                    {{ Math.round(food.total_calories) }} cal
-                                                </div>
-                                                <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    <span>P: {{ Math.round(food.total_protein) }}g</span>
-                                                    <span>C: {{ Math.round(food.total_carbs) }}g</span>
-                                                    <span>F: {{ Math.round(food.total_fat) }}g</span>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="mt-3 flex space-x-3">
-                                            <Link
-                                                :href="route('foods.show', food.id)"
-                                                class="text-green-600 hover:text-green-800 text-sm font-medium"
-                                            >
-                                                View
-                                            </Link>
-                                            <Link
-                                                :href="route('foods.edit', food.id)"
-                                                class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                            >
-                                                Edit
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-900 dark:text-white">
+                                            {{ food.servings }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                            {{ Math.round(food.total_calories) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            {{ Math.round(food.total_protein) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            {{ Math.round(food.total_carbs) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            {{ Math.round(food.total_fat) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <div class="flex justify-center space-x-2">
+                                                <Link
+                                                    :href="route('foods.show', food.id)"
+                                                    class="text-green-600 hover:text-green-800 text-xs font-medium"
+                                                >
+                                                    View
+                                                </Link>
+                                                <Link
+                                                    :href="route('foods.edit', food.id)"
+                                                    class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                                >
+                                                    Edit
+                                                </Link>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Total Row -->
+                                    <tr class="bg-gray-50 dark:bg-gray-700 font-semibold">
+                                        <td class="px-4 py-3 text-gray-900 dark:text-white">
+                                            <strong>TOTAL</strong>
+                                        </td>
+                                        <td class="px-4 py-3"></td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            <strong>{{ Math.round(dailyTotals?.calories || 0) }}</strong>
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            <strong>{{ Math.round(dailyTotals?.protein || 0) }}</strong>
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            <strong>{{ Math.round(dailyTotals?.carbs || 0) }}</strong>
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                                            <strong>{{ Math.round(dailyTotals?.fat || 0) }}</strong>
+                                        </td>
+                                        <td class="px-4 py-3"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

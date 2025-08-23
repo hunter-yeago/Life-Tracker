@@ -66,10 +66,10 @@ function editFoodType(foodType: FoodType) {
     selectedFoodType.value = foodType;
     editForm.name = foodType.name;
     editForm.description = foodType.description || '';
-    editForm.calories_per_100g = foodType.calories_per_100g.toString();
-    editForm.protein_per_100g = foodType.protein_per_100g.toString();
-    editForm.carbs_per_100g = foodType.carbs_per_100g.toString();
-    editForm.fat_per_100g = foodType.fat_per_100g.toString();
+    editForm.calories_per_serving = foodType.calories_per_serving.toString();
+    editForm.protein_per_serving = foodType.protein_per_serving.toString();
+    editForm.carbs_per_serving = foodType.carbs_per_serving.toString();
+    editForm.fat_per_serving = foodType.fat_per_serving.toString();
     editForm.category = foodType.category || '';
     showEditModal.value = true;
 }
@@ -176,7 +176,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                                         {{ foodType.name }}
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ Math.round(foodType.calories_per_serving) }} cal/{{ foodType.serving_size || 'serving' }}
+                                        {{ Math.round(foodType.calories_per_serving || 0) }} cal/{{ foodType.serving_size || 'serving' }}
                                     </div>
                                 </div>
                                 <div v-if="filteredRegularFoodTypes.length === 0" class="text-center text-gray-500 py-4">
@@ -224,30 +224,30 @@ const filteredOneTimeFoodTypes = computed(() => {
                                     </div>
 
                                     <div>
-                                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Nutrition (per 100g)</h4>
+                                        <h4 class="font-medium text-gray-900 dark:text-white mb-2">Nutrition (per serving)</h4>
                                         <div class="grid grid-cols-2 gap-2 text-sm">
                                             <div class="rounded bg-gray-50 p-2 dark:bg-gray-700">
                                                 <div class="text-gray-500 dark:text-gray-400">Calories</div>
                                                 <div class="font-medium text-gray-900 dark:text-white">
-                                                    {{ Math.round(selectedFoodType.calories_per_100g) }}
+                                                    {{ Math.round(selectedFoodType.calories_per_serving || 0) }}
                                                 </div>
                                             </div>
                                             <div class="rounded bg-gray-50 p-2 dark:bg-gray-700">
                                                 <div class="text-gray-500 dark:text-gray-400">Protein</div>
                                                 <div class="font-medium text-gray-900 dark:text-white">
-                                                    {{ Math.round(selectedFoodType.protein_per_100g * 10) / 10 }}g
+                                                    {{ Math.round((selectedFoodType.protein_per_serving || 0) * 10) / 10 }}g
                                                 </div>
                                             </div>
                                             <div class="rounded bg-gray-50 p-2 dark:bg-gray-700">
                                                 <div class="text-gray-500 dark:text-gray-400">Carbs</div>
                                                 <div class="font-medium text-gray-900 dark:text-white">
-                                                    {{ Math.round(selectedFoodType.carbs_per_100g * 10) / 10 }}g
+                                                    {{ Math.round((selectedFoodType.carbs_per_serving || 0) * 10) / 10 }}g
                                                 </div>
                                             </div>
                                             <div class="rounded bg-gray-50 p-2 dark:bg-gray-700">
                                                 <div class="text-gray-500 dark:text-gray-400">Fat</div>
                                                 <div class="font-medium text-gray-900 dark:text-white">
-                                                    {{ Math.round(selectedFoodType.fat_per_100g * 10) / 10 }}g
+                                                    {{ Math.round((selectedFoodType.fat_per_serving || 0) * 10) / 10 }}g
                                                 </div>
                                             </div>
                                         </div>
@@ -282,7 +282,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                                     {{ foodType.name }}
                                 </div>
                                 <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                    {{ Math.round(foodType.calories_per_serving) }} cal/{{ foodType.serving_size || 'serving' }}
+                                    {{ Math.round(foodType.calories_per_serving || 0) }} cal/{{ foodType.serving_size || 'serving' }}
                                 </div>
                                 <div class="text-xs text-gray-400 dark:text-gray-500">
                                     {{ foodType.category || 'No category' }}
@@ -338,59 +338,59 @@ const filteredOneTimeFoodTypes = computed(() => {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <InputLabel for="calories" value="Calories (per 100g)" />
+                            <InputLabel for="calories" value="Calories (per serving)" />
                             <TextInput
                                 id="calories"
-                                v-model="editForm.calories_per_100g"
+                                v-model="editForm.calories_per_serving"
                                 type="number"
                                 step="0.1"
                                 min="0"
                                 class="mt-1 block w-full"
                                 required
                             />
-                            <InputError :message="editForm.errors.calories_per_100g" class="mt-2" />
+                            <InputError :message="editForm.errors.calories_per_serving" class="mt-2" />
                         </div>
 
                         <div>
-                            <InputLabel for="protein" value="Protein (per 100g)" />
+                            <InputLabel for="protein" value="Protein (per serving)" />
                             <TextInput
                                 id="protein"
-                                v-model="editForm.protein_per_100g"
+                                v-model="editForm.protein_per_serving"
                                 type="number"
                                 step="0.1"
                                 min="0"
                                 class="mt-1 block w-full"
                                 required
                             />
-                            <InputError :message="editForm.errors.protein_per_100g" class="mt-2" />
+                            <InputError :message="editForm.errors.protein_per_serving" class="mt-2" />
                         </div>
 
                         <div>
-                            <InputLabel for="carbs" value="Carbs (per 100g)" />
+                            <InputLabel for="carbs" value="Carbs (per serving)" />
                             <TextInput
                                 id="carbs"
-                                v-model="editForm.carbs_per_100g"
+                                v-model="editForm.carbs_per_serving"
                                 type="number"
                                 step="0.1"
                                 min="0"
                                 class="mt-1 block w-full"
                                 required
                             />
-                            <InputError :message="editForm.errors.carbs_per_100g" class="mt-2" />
+                            <InputError :message="editForm.errors.carbs_per_serving" class="mt-2" />
                         </div>
 
                         <div>
-                            <InputLabel for="fat" value="Fat (per 100g)" />
+                            <InputLabel for="fat" value="Fat (per serving)" />
                             <TextInput
                                 id="fat"
-                                v-model="editForm.fat_per_100g"
+                                v-model="editForm.fat_per_serving"
                                 type="number"
                                 step="0.1"
                                 min="0"
                                 class="mt-1 block w-full"
                                 required
                             />
-                            <InputError :message="editForm.errors.fat_per_100g" class="mt-2" />
+                            <InputError :message="editForm.errors.fat_per_serving" class="mt-2" />
                         </div>
                     </div>
                 </div>

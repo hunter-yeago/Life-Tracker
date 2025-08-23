@@ -110,24 +110,29 @@ function createCalorieChart() {
         .attr('r', 4)
         .attr('fill', '#10B981');
 
+    // Determine if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? 'white' : '#374151';
+    const lineColor = isDarkMode ? 'white' : '#6B7280';
+
     // Add axes
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(formatDate as any))
         .selectAll('text')
-        .style('fill', 'white');
+        .style('fill', textColor);
 
     svg.append('g')
         .call(d3.axisLeft(y))
         .selectAll('text')
-        .style('fill', 'white');
+        .style('fill', textColor);
 
     // Style axis lines
     svg.selectAll('.domain')
-        .style('stroke', 'white');
+        .style('stroke', lineColor);
     
     svg.selectAll('.tick line')
-        .style('stroke', 'white');
+        .style('stroke', lineColor);
 
     // Add labels
     svg.append('text')
@@ -136,7 +141,7 @@ function createCalorieChart() {
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
-        .style('fill', 'white')
+        .style('fill', textColor)
         .text('Calories');
 }
 
@@ -199,24 +204,29 @@ function createWeightChart() {
         .attr('r', 4)
         .attr('fill', '#3B82F6');
 
+    // Determine if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? 'white' : '#374151';
+    const lineColor = isDarkMode ? 'white' : '#6B7280';
+
     // Add axes
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(formatDate as any))
         .selectAll('text')
-        .style('fill', 'white');
+        .style('fill', textColor);
 
     svg.append('g')
         .call(d3.axisLeft(y))
         .selectAll('text')
-        .style('fill', 'white');
+        .style('fill', textColor);
 
     // Style axis lines
     svg.selectAll('.domain')
-        .style('stroke', 'white');
+        .style('stroke', lineColor);
     
     svg.selectAll('.tick line')
-        .style('stroke', 'white');
+        .style('stroke', lineColor);
 
     // Add labels
     svg.append('text')
@@ -225,7 +235,7 @@ function createWeightChart() {
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
-        .style('fill', 'white')
+        .style('fill', textColor)
         .text('Weight (lbs)');
 }
 </script>

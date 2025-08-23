@@ -234,6 +234,7 @@ const displayServings = (servings: number) => {
 onMounted(() => {
     if (props.newlyCreatedFoodTypeId) {
         form.food_type_id = props.newlyCreatedFoodTypeId.toString();
+        form.servings = '1'; // Set default serving amount
         updateSelectedFoodType();
     }
 });
@@ -463,6 +464,20 @@ onMounted(() => {
                                     </optgroup>
                                 </select>
                                 <InputError class="mt-2" :message="form.errors.food_type_id" />
+                                
+                                <!-- Newly created food type notification -->
+                                <div v-if="selectedFoodType && props.newlyCreatedFoodTypeId && selectedFoodType.id === props.newlyCreatedFoodTypeId" 
+                                     class="mt-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-green-600 dark:text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span class="text-sm text-green-800 dark:text-green-200 font-medium">
+                                            ✨ Your new food type "{{ selectedFoodType.name }}" is ready to log! 
+                                            Adjust servings below and click "Add Food & Continue".
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
 
@@ -533,8 +548,11 @@ onMounted(() => {
                                 >
                                     Clear Form
                                 </button>
-                                <PrimaryButton :disabled="form.processing">
-                                    Add Food & Continue
+                                <PrimaryButton 
+                                    :disabled="form.processing"
+                                    :class="selectedFoodType && props.newlyCreatedFoodTypeId && selectedFoodType.id === props.newlyCreatedFoodTypeId ? 'bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-900' : ''"
+                                >
+                                    {{ selectedFoodType && props.newlyCreatedFoodTypeId && selectedFoodType.id === props.newlyCreatedFoodTypeId ? '✨ Log New Food Item' : 'Add Food & Continue' }}
                                 </PrimaryButton>
                             </div>
                         </form>
@@ -557,116 +575,117 @@ onMounted(() => {
                                 :key="food.id"
                                 class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
-                                        <!-- Regular Display Mode -->
-                                        <div v-if="editingFoodId !== food.id">
-                                            <div class="flex justify-between items-start">
-                                                <div class="flex-1">
-                                                    <h6 class="font-medium text-gray-900 dark:text-white">
-                                                        {{ food.food_type.name }}
-                                                    </h6>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        {{ food.food_type.category }}
-                                                    </p>
-                                                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                                        {{ displayServings(food.servings) }} serving{{ food.servings !== 1 ? 's' : '' }}
-                                                    </p>
-                                                    <p v-if="food.notes" class="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
-                                                        {{ food.notes }}
-                                                    </p>
-                                                </div>
-                                                <div class="text-right ml-4">
-                                                    <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                                                        {{ Math.round(food.total_calories) }} cal
-                                                    </div>
-                                                    <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        <span>P: {{ Math.round(food.total_protein) }}g</span>
-                                                        <span>C: {{ Math.round(food.total_carbs) }}g</span>
-                                                        <span>F: {{ Math.round(food.total_fat) }}g</span>
-                                                    </div>
-                                                </div>
+                                <!-- Regular Display Mode -->
+                                <div v-if="editingFoodId !== food.id">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <h6 class="font-medium text-gray-900 dark:text-white">
+                                                {{ food.food_type.name }}
+                                            </h6>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ food.food_type.category }}
+                                            </p>
+                                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                                {{ displayServings(food.servings) }} serving{{ food.servings !== 1 ? 's' : '' }}
+                                            </p>
+                                            <p v-if="food.notes" class="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">
+                                                {{ food.notes }}
+                                            </p>
+                                        </div>
+                                        <div class="text-right ml-4">
+                                            <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                                                {{ Math.round(food.total_calories) }} cal
                                             </div>
-                                            <div class="mt-3 flex space-x-3">
-                                                <button
-                                                    @click="startEditing(food)"
-                                                    class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    @click="deleteFood(food.id)"
-                                                    class="text-red-600 hover:text-red-800 text-sm font-medium"
-                                                >
-                                                    Delete
-                                                </button>
+                                            <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                <span>P: {{ Math.round(food.total_protein) }}g</span>
+                                                <span>C: {{ Math.round(food.total_carbs) }}g</span>
+                                                <span>F: {{ Math.round(food.total_fat) }}g</span>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="mt-3 flex space-x-3">
+                                        <button
+                                            @click="startEditing(food)"
+                                            class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            @click="deleteFood(food.id)"
+                                            class="text-red-600 hover:text-red-800 text-sm font-medium"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
 
-                                        <!-- Inline Edit Mode -->
-                                        <div v-else class="space-y-4">
-                                            <div class="flex justify-between items-start">
-                                                <div class="flex-1">
-                                                    <h6 class="font-medium text-gray-900 dark:text-white">
-                                                        {{ food.food_type.name }}
-                                                    </h6>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                        {{ food.food_type.category }}
-                                                    </p>
-                                                </div>
-                                                <div class="text-right ml-4">
-                                                    <div class="text-lg font-semibold text-gray-900 dark:text-white">
-                                                        {{ getEditedNutrition(food).calories }} cal
-                                                    </div>
-                                                    <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                        <span>Protein: {{ getEditedNutrition(food).protein }}g</span>
-                                                        <span>Carbs: {{ getEditedNutrition(food).carbs }}g</span>
-                                                        <span>Fat: {{ getEditedNutrition(food).fat }}g</span>
-                                                    </div>
-                                                </div>
+                                <!-- Inline Edit Mode -->
+                                <div v-else class="space-y-4">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <h6 class="font-medium text-gray-900 dark:text-white">
+                                                {{ food.food_type.name }}
+                                            </h6>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ food.food_type.category }}
+                                            </p>
+                                        </div>
+                                        <div class="text-right ml-4">
+                                            <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                                                {{ getEditedNutrition(food).calories }} cal
                                             </div>
-                                            
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Servings
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        step="0.5"
-                                                        min="0"
-                                                        v-model="editForm.servings"
-                                                        class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                                                        placeholder="e.g., 1.5"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                        Notes
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        v-model="editForm.notes"
-                                                        class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                                                        placeholder="Optional notes..."
-                                                    />
-                                                </div>
+                                            <div class="flex space-x-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                <span>Protein: {{ getEditedNutrition(food).protein }}g</span>
+                                                <span>Carbs: {{ getEditedNutrition(food).carbs }}g</span>
+                                                <span>Fat: {{ getEditedNutrition(food).fat }}g</span>
                                             </div>
-                                            
-                                            <div class="flex space-x-3 justify-end">
-                                                <button
-                                                    @click="cancelEditing"
-                                                    class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm font-medium px-3 py-1"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    @click="saveEdit(food)"
-                                                    class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1 rounded"
-                                                >
-                                                    Save
-                                                </button>
-                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Servings
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                v-model="editForm.servings"
+                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                placeholder="e.g., 1.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Notes
+                                            </label>
+                                            <input
+                                                type="text"
+                                                v-model="editForm.notes"
+                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                placeholder="Optional notes..."
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex space-x-3 justify-end">
+                                        <button
+                                            @click="cancelEditing"
+                                            class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm font-medium px-3 py-1"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            @click="saveEdit(food)"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1 rounded"
+                                        >
+                                            Save
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
                     </div>
                 </div>
             </div>

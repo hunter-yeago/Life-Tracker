@@ -39,17 +39,27 @@ class FoodController extends Controller
             ')
             ->first();
 
-        // Get available dates for the selected month
+        // Get all dates for the selected month
         $startOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
         $endOfMonth = Carbon::createFromFormat('Y-m', $selectedMonth)->endOfMonth();
 
-        $availableDates = auth()->user()->foods()
+        // Generate all dates in the month
+        $allDates = [];
+        $current = $startOfMonth->copy();
+        while ($current->lte($endOfMonth)) {
+            $allDates[] = $current->format('Y-m-d');
+            $current->addDay();
+        }
+
+        // Get dates that have data
+        $datesWithData = auth()->user()->foods()
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->selectRaw('DATE(consumed_at) as date')
             ->groupBy('date')
-            ->orderBy('date', 'desc')
             ->pluck('date')
             ->toArray();
+
+        $availableDates = array_reverse($allDates); // Show most recent dates first
 
         // Generate month options (last 12 months)
         $monthOptions = collect();
@@ -67,6 +77,7 @@ class FoodController extends Controller
             'selectedDate' => $selectedDate,
             'selectedMonth' => $selectedMonth,
             'availableDates' => $availableDates,
+            'datesWithData' => $datesWithData,
             'monthOptions' => $monthOptions,
         ]);
     }
@@ -78,7 +89,17 @@ class FoodController extends Controller
         // Parse the selected date
         $date = Carbon::createFromFormat('Y-m-d', $selectedDate);
 
+        // Get regular food types
         $foodTypes = FoodType::regularItems()->get();
+
+        // If there's a newly created food type, include it (even if it's a one-time item)
+        $newlyCreatedFoodTypeId = session('newly_created_food_type_id');
+        if ($newlyCreatedFoodTypeId) {
+            $newlyCreatedFoodType = FoodType::find($newlyCreatedFoodTypeId);
+            if ($newlyCreatedFoodType && $newlyCreatedFoodType->is_one_time_item) {
+                $foodTypes->push($newlyCreatedFoodType);
+            }
+        }
 
         // Get food entries for the selected day
         $foods = auth()->user()->foods()
@@ -134,6 +155,11 @@ class FoodController extends Controller
 
         $consumedDate = Carbon::parse($request->consumed_at)->format('Y-m-d');
 
+        // Clear the newly created food type session if it was a one-time item
+        if ($foodType->is_one_time_item && session('newly_created_food_type_id') == $foodType->id) {
+            session()->forget('newly_created_food_type_id');
+        }
+
         return redirect()->route('foods.create', ['date' => $consumedDate])
             ->with('success', 'Food intake logged successfully!');
     }
@@ -160,7 +186,7 @@ class FoodController extends Controller
         }
 
         $food->load('foodType');
-        
+
         return Inertia::render('Foods/Edit', [
             'food' => $food,
         ]);

@@ -46,15 +46,45 @@ class FoodTypeController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'calories_per_serving' => 'required|numeric|min:0',
-            'protein_per_serving' => 'required|numeric|min:0',
-            'carbs_per_serving' => 'required|numeric|min:0',
-            'fat_per_serving' => 'required|numeric|min:0',
-            'is_one_time_item' => 'boolean',
-        ]);
+        $isOneTimeItem = $request->boolean('is_one_time_item');
+
+        // For one-time items, don't validate uniqueness and modify the name immediately
+        if ($isOneTimeItem) {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'calories_per_serving' => 'required|numeric|min:0',
+                'protein_per_serving' => 'required|numeric|min:0',
+                'carbs_per_serving' => 'required|numeric|min:0',
+                'fat_per_serving' => 'required|numeric|min:0',
+                'is_one_time_item' => 'boolean',
+            ]);
+
+            // Always make the name unique by appending timestamp
+            $originalName = $validated['name'];
+            $timestampSuffix = ' ('.now()->format('M j, g:i A').')';
+            $uniqueName = $originalName.$timestampSuffix;
+
+            // Ensure the generated name is also unique (in case of rapid submissions)
+            $counter = 1;
+            while (FoodType::where('name', $uniqueName)->exists()) {
+                $uniqueName = $originalName.$timestampSuffix.' #'.$counter;
+                $counter++;
+            }
+
+            $validated['name'] = $uniqueName;
+        } else {
+            // For regular items, validate uniqueness
+            $validated = $request->validate([
+                'name' => 'required|string|max:255|unique:food_types,name',
+                'description' => 'nullable|string',
+                'calories_per_serving' => 'required|numeric|min:0',
+                'protein_per_serving' => 'required|numeric|min:0',
+                'carbs_per_serving' => 'required|numeric|min:0',
+                'fat_per_serving' => 'required|numeric|min:0',
+                'is_one_time_item' => 'boolean',
+            ]);
+        }
 
         // Set defaults for fields not collected in the form but needed in the database
         $validated['serving_size'] = '1 serving';
