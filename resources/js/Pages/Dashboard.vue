@@ -5,6 +5,16 @@ import { onMounted, ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import * as d3 from 'd3';
 
+interface DietPeriod {
+    id: number;
+    name: string;
+    phase_type: string;
+    start_date: string;
+    end_date: string;
+    target_calories?: number;
+    target_protein?: number;
+}
+
 interface Props {
     nutritionStats: {
         totalCalories: number;
@@ -18,6 +28,7 @@ interface Props {
         weightByDay: Array<{ date: string; weight: number }>;
     };
     currentMonth: string;
+    dietPeriods: DietPeriod[];
 }
 
 const props = defineProps<Props>();
@@ -54,8 +65,9 @@ onMounted(() => {
 function createCalorieChart() {
     if (!calorieChart.value) return;
     
-    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
-    const width = calorieChart.value.clientWidth - margin.left - margin.right;
+    const margin = { top: 60, right: 30, bottom: 40, left: 60 };
+    const containerWidth = Math.min(calorieChart.value.clientWidth, calorieChart.value.parentElement?.clientWidth || 800);
+    const width = containerWidth - margin.left - margin.right;
     const height = 300 - margin.top - margin.bottom;
 
     // Clear previous chart
@@ -63,8 +75,9 @@ function createCalorieChart() {
 
     const svg = d3.select(calorieChart.value)
         .append('svg')
-        .attr('width', width + margin.left + margin.right)
+        .attr('width', '100%')
         .attr('height', height + margin.top + margin.bottom)
+        .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -85,6 +98,69 @@ function createCalorieChart() {
     const y = d3.scaleLinear()
         .domain([0, d3.max(processedData, d => d.calories) || 0])
         .range([height, 0]);
+
+    // Determine if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#F3F4F6' : '#374151';
+    const gridColor = isDarkMode ? '#6B7280' : '#E5E7EB';
+    const axisColor = isDarkMode ? '#9CA3AF' : '#9CA3AF';
+
+    // Add diet period backgrounds
+    const phaseColors = {
+        cut: isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+        bulk: isDarkMode ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)', 
+        maintenance: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+    };
+
+    props.dietPeriods.forEach(period => {
+        const startX = x(parseDate(period.start_date)!);
+        const endX = x(parseDate(period.end_date)!);
+        const color = phaseColors[period.phase_type as keyof typeof phaseColors];
+        
+        // Add background rectangle for period
+        svg.append('rect')
+            .attr('x', startX)
+            .attr('y', 0)
+            .attr('width', endX - startX)
+            .attr('height', height)
+            .attr('fill', color)
+            .attr('opacity', 0.3);
+            
+        // Add period label at the top
+        if (endX - startX > 80) { // Only show label if there's enough space
+            svg.append('text')
+                .attr('x', startX + (endX - startX) / 2)
+                .attr('y', -10)
+                .style('text-anchor', 'middle')
+                .style('fill', textColor)
+                .style('font-size', '12px')
+                .style('font-weight', '500')
+                .text(`${period.name} (${period.phase_type})`);
+        }
+
+        // Add target calorie line if available
+        if (period.target_calories) {
+            svg.append('line')
+                .attr('x1', startX)
+                .attr('x2', endX)
+                .attr('y1', y(period.target_calories))
+                .attr('y2', y(period.target_calories))
+                .attr('stroke', isDarkMode ? '#F59E0B' : '#D97706')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,5')
+                .attr('opacity', 0.8);
+                
+            // Add target label
+            svg.append('text')
+                .attr('x', endX - 5)
+                .attr('y', y(period.target_calories) - 5)
+                .style('text-anchor', 'end')
+                .style('fill', isDarkMode ? '#F59E0B' : '#D97706')
+                .style('font-size', '11px')
+                .style('font-weight', '500')
+                .text(`Target: ${Math.round(period.target_calories)}`);
+        }
+    });
 
     // Create line generator
     const line = d3.line<any>()
@@ -110,31 +186,33 @@ function createCalorieChart() {
         .attr('r', 4)
         .attr('fill', '#10B981');
 
-    // Determine if we're in dark mode
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    const textColor = isDarkMode ? 'white' : '#374151';
-    const lineColor = isDarkMode ? 'white' : '#6B7280';
-
-    // Add axes
+    // Add axes with improved styling
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(formatDate as any))
-        .selectAll('text')
-        .style('fill', textColor);
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
 
     svg.append('g')
         .call(d3.axisLeft(y))
-        .selectAll('text')
-        .style('fill', textColor);
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
 
-    // Style axis lines
-    svg.selectAll('.domain')
-        .style('stroke', lineColor);
-    
-    svg.selectAll('.tick line')
-        .style('stroke', lineColor);
-
-    // Add labels
+    // Add Y-axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('y', 0 - margin.left)
@@ -142,14 +220,17 @@ function createCalorieChart() {
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
         .style('fill', textColor)
+        .style('font-size', '14px')
+        .style('font-weight', '500')
         .text('Calories');
 }
 
 function createWeightChart() {
     if (!weightChart.value) return;
     
-    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
-    const width = weightChart.value.clientWidth - margin.left - margin.right;
+    const margin = { top: 60, right: 30, bottom: 40, left: 60 };
+    const containerWidth = Math.min(weightChart.value.clientWidth, weightChart.value.parentElement?.clientWidth || 800);
+    const width = containerWidth - margin.left - margin.right;
     const height = 300 - margin.top - margin.bottom;
 
     // Clear previous chart
@@ -157,8 +238,9 @@ function createWeightChart() {
 
     const svg = d3.select(weightChart.value)
         .append('svg')
-        .attr('width', width + margin.left + margin.right)
+        .attr('width', '100%')
         .attr('height', height + margin.top + margin.bottom)
+        .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -179,6 +261,46 @@ function createWeightChart() {
     const y = d3.scaleLinear()
         .domain(d3.extent(processedData, d => d.weight) as [number, number])
         .range([height, 0]);
+
+    // Determine if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#F3F4F6' : '#374151';
+    const gridColor = isDarkMode ? '#6B7280' : '#E5E7EB';
+    const axisColor = isDarkMode ? '#9CA3AF' : '#9CA3AF';
+
+    // Add diet period backgrounds
+    const phaseColors = {
+        cut: isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
+        bulk: isDarkMode ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)', 
+        maintenance: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+    };
+
+    props.dietPeriods.forEach(period => {
+        const startX = x(parseDate(period.start_date)!);
+        const endX = x(parseDate(period.end_date)!);
+        const color = phaseColors[period.phase_type as keyof typeof phaseColors];
+        
+        // Add background rectangle for period
+        svg.append('rect')
+            .attr('x', startX)
+            .attr('y', 0)
+            .attr('width', endX - startX)
+            .attr('height', height)
+            .attr('fill', color)
+            .attr('opacity', 0.3);
+            
+        // Add period label at the top
+        if (endX - startX > 80) { // Only show label if there's enough space
+            svg.append('text')
+                .attr('x', startX + (endX - startX) / 2)
+                .attr('y', -10)
+                .style('text-anchor', 'middle')
+                .style('fill', textColor)
+                .style('font-size', '12px')
+                .style('font-weight', '500')
+                .text(`${period.name} (${period.phase_type})`);
+        }
+    });
 
     // Create line generator
     const line = d3.line<any>()
@@ -204,31 +326,33 @@ function createWeightChart() {
         .attr('r', 4)
         .attr('fill', '#3B82F6');
 
-    // Determine if we're in dark mode
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    const textColor = isDarkMode ? 'white' : '#374151';
-    const lineColor = isDarkMode ? 'white' : '#6B7280';
-
-    // Add axes
+    // Add axes with improved styling
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(formatDate as any))
-        .selectAll('text')
-        .style('fill', textColor);
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
 
     svg.append('g')
         .call(d3.axisLeft(y))
-        .selectAll('text')
-        .style('fill', textColor);
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
 
-    // Style axis lines
-    svg.selectAll('.domain')
-        .style('stroke', lineColor);
-    
-    svg.selectAll('.tick line')
-        .style('stroke', lineColor);
-
-    // Add labels
+    // Add Y-axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('y', 0 - margin.left)
@@ -236,6 +360,8 @@ function createWeightChart() {
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
         .style('fill', textColor)
+        .style('font-size', '14px')
+        .style('font-weight', '500')
         .text('Weight (lbs)');
 }
 </script>
@@ -282,7 +408,7 @@ function createWeightChart() {
                     <!-- Calories Chart -->
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Calories by Day</h3>
-                        <div ref="calorieChart" class="w-full"></div>
+                        <div ref="calorieChart" class="w-full overflow-hidden"></div>
                         <div v-if="nutritionStats.caloriesByDay.length === 0" class="text-center text-gray-500 py-8">
                             No calorie data for this month
                         </div>
@@ -291,7 +417,7 @@ function createWeightChart() {
                     <!-- Weight Chart -->
                     <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
                         <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Weight by Day</h3>
-                        <div ref="weightChart" class="w-full"></div>
+                        <div ref="weightChart" class="w-full overflow-hidden"></div>
                         <div v-if="weightStats.weightByDay.length === 0" class="text-center text-gray-500 py-8">
                             No weight data for this month
                         </div>

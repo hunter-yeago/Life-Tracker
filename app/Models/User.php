@@ -56,4 +56,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Food::class);
     }
+
+    public function dietPeriods(): HasMany
+    {
+        return $this->hasMany(DietPeriod::class);
+    }
 }

@@ -125,4 +125,23 @@ class FoodTypeController extends Controller
         return redirect()->route('food-types.index')
             ->with('success', 'Food type deleted successfully!');
     }
+
+    public function usage(FoodType $foodType)
+    {
+        $usageData = $foodType->foods()
+            ->selectRaw('DATE(consumed_at) as usage_date')
+            ->distinct()
+            ->orderBy('usage_date', 'desc')
+            ->pluck('usage_date')
+            ->groupBy(function ($date) {
+                return \Carbon\Carbon::parse($date)->format('Y-m');
+            })
+            ->map(function ($dates) {
+                return $dates->map(function ($date) {
+                    return \Carbon\Carbon::parse($date)->format('j');
+                })->sort()->values();
+            });
+
+        return response()->json($usageData);
+    }
 }

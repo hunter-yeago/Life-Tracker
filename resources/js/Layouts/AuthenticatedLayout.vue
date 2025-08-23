@@ -40,16 +40,16 @@ const showingNavigationDropdown = ref(false);
                                     Dashboard
                                 </NavLink>
                                 <NavLink
-                                    :href="route('workouts.index')"
-                                    :active="route().current('workouts.*')"
+                                    :href="route('daily-data.index')"
+                                    :active="route().current('daily-data.*')"
                                 >
-                                    Workouts
+                                    Daily Data
                                 </NavLink>
                                 <NavLink
-                                    :href="route('foods.index')"
-                                    :active="route().current('foods.*')"
+                                    :href="route('diet-periods.index')"
+                                    :active="route().current('diet-periods.*')"
                                 >
-                                    Nutrition
+                                    Diet Periods
                                 </NavLink>
                                 <NavLink
                                     :href="route('food-types.index')"
@@ -165,16 +165,16 @@ const showingNavigationDropdown = ref(false);
                             Dashboard
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                            :href="route('workouts.index')"
-                            :active="route().current('workouts.*')"
+                            :href="route('daily-data.index')"
+                            :active="route().current('daily-data.*')"
                         >
-                            Workouts
+                            Daily Data
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                            :href="route('foods.index')"
-                            :active="route().current('foods.*')"
+                            :href="route('diet-periods.index')"
+                            :active="route().current('diet-periods.*')"
                         >
-                            Nutrition
+                            Diet Periods
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('food-types.index')"

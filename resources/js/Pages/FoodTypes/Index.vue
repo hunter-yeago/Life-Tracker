@@ -38,8 +38,10 @@ const props = defineProps<Props>();
 
 const searchQuery = ref(props.search || '');
 const selectedFoodType = ref<FoodType | null>(null);
+const usageData = ref<Record<string, number[]>>({});
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const showCreateModal = ref(false);
 
 const editForm = useForm({
     name: '',
@@ -54,12 +56,32 @@ const editForm = useForm({
     is_one_time_item: false,
 });
 
+const createForm = useForm({
+    name: '',
+    description: '',
+    calories_per_serving: '',
+    protein_per_serving: '',
+    carbs_per_serving: '',
+    fat_per_serving: '',
+    is_one_time_item: false,
+});
+
 function searchFoodTypes() {
     router.get('/food-types', { search: searchQuery.value }, { preserveState: true });
 }
 
-function viewFoodType(foodType: FoodType) {
+async function viewFoodType(foodType: FoodType) {
     selectedFoodType.value = foodType;
+    usageData.value = {}; // Reset usage data
+    
+    try {
+        const response = await fetch(`/api/food-types/${foodType.id}/usage`);
+        const data = await response.json();
+        usageData.value = data;
+    } catch (error) {
+        console.error('Failed to fetch usage data:', error);
+        usageData.value = {};
+    }
 }
 
 function editFoodType(foodType: FoodType) {
@@ -102,11 +124,28 @@ function deleteFoodType() {
     });
 }
 
+function createFoodType() {
+    createForm.post('/food-types', {
+        onSuccess: () => {
+            showCreateModal.value = false;
+            createForm.reset();
+        },
+    });
+}
+
 function closeModal() {
     showEditModal.value = false;
     showDeleteModal.value = false;
+    showCreateModal.value = false;
     selectedFoodType.value = null;
     editForm.reset();
+    createForm.reset();
+}
+
+function formatMonth(month: string): string {
+    const [year, monthNum] = month.split('-');
+    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
 }
 
 const filteredRegularFoodTypes = computed(() => {
@@ -135,9 +174,14 @@ const filteredOneTimeFoodTypes = computed(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                Food Types Management
-            </h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    Food Types Management
+                </h2>
+                <PrimaryButton @click="showCreateModal = true">
+                    Create Food Type
+                </PrimaryButton>
+            </div>
         </template>
 
         <div class="py-12">
@@ -253,6 +297,31 @@ const filteredOneTimeFoodTypes = computed(() => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Usage History -->
+                                <div v-if="Object.keys(usageData).length > 0" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-3">Usage History</h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div 
+                                            v-for="(days, month) in usageData" 
+                                            :key="month"
+                                            class="flex items-start"
+                                        >
+                                            <span class="text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">
+                                                {{ formatMonth(month) }}:
+                                            </span>
+                                            <span class="text-gray-900 dark:text-white">
+                                                {{ days.join(', ') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else-if="selectedFoodType" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-3">Usage History</h4>
+                                    <p v-if="Object.keys(usageData).length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                                        This food type hasn't been used yet.
+                                    </p>
+                                </div>
                             </div>
                             <div v-else class="text-center text-gray-500 py-8">
                                 Select a food type to view details
@@ -293,6 +362,121 @@ const filteredOneTimeFoodTypes = computed(() => {
                 </div>
             </div>
         </div>
+
+        <!-- Create Modal -->
+        <Modal :show="showCreateModal" @close="closeModal">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                    Create Food Type
+                </h3>
+                <form @submit.prevent="createFoodType" class="space-y-4">
+                    <div>
+                        <InputLabel for="create_name" value="Name" />
+                        <TextInput
+                            id="create_name"
+                            v-model="createForm.name"
+                            type="text"
+                            class="mt-1 block w-full"
+                            required
+                        />
+                        <InputError class="mt-2" :message="createForm.errors.name" />
+                    </div>
+                    
+                    <div>
+                        <InputLabel for="create_description" value="Description" />
+                        <textarea
+                            id="create_description"
+                            v-model="createForm.description"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                            rows="3"
+                        ></textarea>
+                        <InputError class="mt-2" :message="createForm.errors.description" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel for="create_calories" value="Calories per serving" />
+                            <TextInput
+                                id="create_calories"
+                                v-model="createForm.calories_per_serving"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="mt-1 block w-full"
+                                required
+                            />
+                            <InputError class="mt-2" :message="createForm.errors.calories_per_serving" />
+                        </div>
+                        
+                        <div>
+                            <InputLabel for="create_protein" value="Protein per serving (g)" />
+                            <TextInput
+                                id="create_protein"
+                                v-model="createForm.protein_per_serving"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="mt-1 block w-full"
+                                required
+                            />
+                            <InputError class="mt-2" :message="createForm.errors.protein_per_serving" />
+                        </div>
+                        
+                        <div>
+                            <InputLabel for="create_carbs" value="Carbs per serving (g)" />
+                            <TextInput
+                                id="create_carbs"
+                                v-model="createForm.carbs_per_serving"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="mt-1 block w-full"
+                                required
+                            />
+                            <InputError class="mt-2" :message="createForm.errors.carbs_per_serving" />
+                        </div>
+                        
+                        <div>
+                            <InputLabel for="create_fat" value="Fat per serving (g)" />
+                            <TextInput
+                                id="create_fat"
+                                v-model="createForm.fat_per_serving"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="mt-1 block w-full"
+                                required
+                            />
+                            <InputError class="mt-2" :message="createForm.errors.fat_per_serving" />
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input
+                            id="create_is_one_time"
+                            v-model="createForm.is_one_time_item"
+                            type="checkbox"
+                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800"
+                        />
+                        <label for="create_is_one_time" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            One-time item (cannot be reused)
+                        </label>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+                        Check this for specific meals like "Subway Turkey Sandwich" that you won't reuse
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <SecondaryButton type="button" @click="closeModal">
+                            Cancel
+                        </SecondaryButton>
+                        <PrimaryButton type="submit" :disabled="createForm.processing">
+                            Create Food Type
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </div>
+        </Modal>
 
         <!-- Edit Modal -->
         <Modal :show="showEditModal" @close="closeModal">
