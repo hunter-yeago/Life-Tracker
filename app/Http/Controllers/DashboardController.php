@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyWeight;
 use App\Models\DietPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,13 +58,17 @@ class DashboardController extends Controller
 
     private function getWeightStats($user, $startOfMonth, $endOfMonth): array
     {
-        $weightData = $user->foods()
-            ->select(DB::raw('DATE(consumed_at) as date'), DB::raw('AVG(weight) as weight'))
-            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
-            ->whereNotNull('weight')
-            ->groupBy('date')
+        $weightData = $user->dailyWeights()
+            ->select('date', 'weight')
+            ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->orderBy('date')
-            ->get();
+            ->get()
+            ->map(function ($weight) {
+                return [
+                    'date' => $weight->date->toDateString(),
+                    'weight' => (float) $weight->weight,
+                ];
+            });
 
         return [
             'weightByDay' => $weightData,

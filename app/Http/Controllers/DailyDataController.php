@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyWeight;
 use App\Models\DietPeriod;
 use App\Models\Food;
 use App\Models\FoodType;
@@ -56,6 +57,9 @@ class DailyDataController extends Controller
         // Get available workout types
         $workoutTypes = WorkoutType::orderBy('name')->get();
 
+        // Get daily weight for this date
+        $dailyWeight = DailyWeight::getForUserAndDate(auth()->id(), $date);
+
         return Inertia::render('DailyData/Index', [
             'selectedDate' => $selectedDate,
             'formattedDate' => $date->format('l, F j, Y'),
@@ -65,6 +69,7 @@ class DailyDataController extends Controller
             'workouts' => $workouts,
             'foodTypes' => $foodTypes,
             'workoutTypes' => $workoutTypes,
+            'dailyWeight' => $dailyWeight,
         ]);
     }
 
@@ -147,6 +152,31 @@ class DailyDataController extends Controller
             ->whereDate('workout_date', $date)
             ->delete();
 
+        // Delete daily weight for this date
+        DailyWeight::where('user_id', $userId)
+            ->where('date', $date)
+            ->delete();
+
         return back()->with('success', 'All data for this day has been reset');
+    }
+
+    public function storeWeight(Request $request)
+    {
+        $validated = $request->validate([
+            'weight' => 'required|numeric|min:0|max:9999',
+            'notes' => 'nullable|string|max:1000',
+            'date' => 'required|date',
+        ]);
+
+        $date = Carbon::parse($validated['date']);
+
+        DailyWeight::upsertForUserAndDate(
+            auth()->id(),
+            $date,
+            $validated['weight'],
+            $validated['notes']
+        );
+
+        return back()->with('success', 'Weight logged successfully');
     }
 }

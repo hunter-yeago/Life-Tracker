@@ -70,6 +70,13 @@ interface DailyTotals {
     fat: number;
 }
 
+interface DailyWeight {
+    id: number;
+    weight: number;
+    notes?: string;
+    date: string;
+}
+
 interface Props {
     selectedDate: string;
     formattedDate: string;
@@ -79,12 +86,19 @@ interface Props {
     workouts: Workout[];
     foodTypes: FoodType[];
     workoutTypes: WorkoutType[];
+    dailyWeight?: DailyWeight;
 }
 
 const props = defineProps<Props>();
 
 const showFoodForm = ref(false);
 const showWorkoutForm = ref(false);
+const showWeightForm = ref(false);
+const editingFoodId = ref<number | null>(null);
+const editForm = ref({
+    servings: '',
+    notes: ''
+});
 
 const foodForm = useForm({
     food_type_id: '',
@@ -99,6 +113,12 @@ const workoutForm = useForm({
     intensity: 'moderate',
     notes: '',
     workout_date: props.selectedDate + 'T12:00',
+});
+
+const weightForm = useForm({
+    weight: props.dailyWeight?.weight?.toString() || '',
+    notes: props.dailyWeight?.notes || '',
+    date: props.selectedDate,
 });
 
 const dateInput = ref<HTMLInputElement>();
@@ -168,6 +188,14 @@ function submitWorkout() {
     });
 }
 
+function submitWeight() {
+    weightForm.post(route('daily-data.weight'), {
+        onSuccess: () => {
+            showWeightForm.value = false;
+        }
+    });
+}
+
 function resetDay() {
     if (confirm('Are you sure you want to reset ALL data for this day? This will delete all food and workout entries and cannot be undone.')) {
         router.delete(route('daily-data.reset'), {
@@ -175,6 +203,71 @@ function resetDay() {
             preserveScroll: true,
         });
     }
+}
+
+function startEditingFood(food: Food) {
+    editingFoodId.value = food.id;
+    editForm.value = {
+        servings: food.servings.toString(),
+        notes: food.notes || ''
+    };
+}
+
+function cancelEditingFood() {
+    editingFoodId.value = null;
+    editForm.value = {
+        servings: '',
+        notes: ''
+    };
+}
+
+function saveEditFood(food: Food) {
+    const servings = parseFloat(editForm.value.servings);
+    if (!servings || servings <= 0) {
+        alert('Please enter a valid serving amount');
+        return;
+    }
+
+    router.put(route('foods.update', food.id), {
+        servings: servings,
+        notes: editForm.value.notes
+    }, {
+        onSuccess: () => {
+            editingFoodId.value = null;
+            router.reload({ 
+                only: ['foods', 'dailyTotals'],
+                preserveState: true,
+                preserveScroll: true 
+            });
+        },
+        onError: (errors) => {
+            console.error('Update failed:', errors);
+        }
+    });
+}
+
+function deleteFood(foodId: number) {
+    if (confirm('Are you sure you want to delete this food entry?')) {
+        router.delete(route('foods.destroy', foodId), {
+            onSuccess: () => {
+                router.reload({ 
+                    only: ['foods', 'dailyTotals'],
+                    preserveState: true,
+                    preserveScroll: true 
+                });
+            }
+        });
+    }
+}
+
+function getEditedNutrition(food: Food) {
+    const servings = parseFloat(editForm.value.servings) || 0;
+    return {
+        calories: Math.round(food.food_type.calories_per_serving * servings),
+        protein: Math.round(food.food_type.protein_per_serving * servings * 10) / 10,
+        carbs: Math.round(food.food_type.carbs_per_serving * servings * 10) / 10,
+        fat: Math.round(food.food_type.fat_per_serving * servings * 10) / 10,
+    };
 }
 
 const selectedFoodType = computed(() => {
@@ -354,7 +447,13 @@ function getPhaseColor(phase: string) {
                 </div>
 
                 <!-- Quick Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Weight</div>
+                        <div class="text-2xl font-bold text-purple-600">
+                            {{ dailyWeight ? `${Math.round(dailyWeight.weight * 10) / 10} lbs` : 'Not set' }}
+                        </div>
+                    </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Calories Consumed</div>
                         <div class="text-2xl font-bold text-green-600">
@@ -378,6 +477,81 @@ function getPhaseColor(phase: string) {
                         <div class="text-2xl font-bold text-blue-600">
                             {{ Math.round(dailyTotals.protein) }}g
                         </div>
+                    </div>
+                </div>
+
+                <!-- Weight Section -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Daily Weight</h4>
+                        <PrimaryButton @click="showWeightForm = !showWeightForm">
+                            {{ dailyWeight ? 'Update Weight' : 'Log Weight' }}
+                        </PrimaryButton>
+                    </div>
+
+                    <!-- Weight Form -->
+                    <div v-if="showWeightForm" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <form @submit.prevent="submitWeight" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <InputLabel for="weight" value="Weight (lbs)" />
+                                    <TextInput
+                                        id="weight"
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="9999"
+                                        v-model="weightForm.weight"
+                                        class="w-full"
+                                        required
+                                        placeholder="e.g., 185.5"
+                                    />
+                                    <InputError :message="weightForm.errors.weight" />
+                                </div>
+                                <div>
+                                    <InputLabel for="weight_notes" value="Notes" />
+                                    <TextInput
+                                        id="weight_notes"
+                                        v-model="weightForm.notes"
+                                        class="w-full"
+                                        placeholder="Optional notes..."
+                                    />
+                                    <InputError :message="weightForm.errors.notes" />
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <PrimaryButton type="submit" :disabled="weightForm.processing">
+                                    {{ dailyWeight ? 'Update Weight' : 'Log Weight' }}
+                                </PrimaryButton>
+                                <SecondaryButton @click="showWeightForm = false">
+                                    Cancel
+                                </SecondaryButton>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Current Weight Display -->
+                    <div v-if="dailyWeight && !showWeightForm" class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-lg font-semibold text-purple-900 dark:text-purple-100">
+                                    {{ Math.round(dailyWeight.weight * 10) / 10 }} lbs
+                                </div>
+                                <div v-if="dailyWeight.notes" class="text-sm text-purple-700 dark:text-purple-300 italic">
+                                    {{ dailyWeight.notes }}
+                                </div>
+                            </div>
+                            <button
+                                @click="showWeightForm = true"
+                                class="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 text-sm font-medium"
+                            >
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="!dailyWeight && !showWeightForm" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No weight logged for this day
                     </div>
                 </div>
 
@@ -463,20 +637,101 @@ function getPhaseColor(phase: string) {
 
                     <!-- Food List -->
                     <div v-if="foods.length > 0" class="space-y-2">
-                        <div v-for="food in foods" :key="food.id" class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <div class="font-medium text-gray-900 dark:text-white">
-                                    {{ food.food_type.name }}
+                        <div v-for="food in foods" :key="food.id" class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                            <!-- Regular Display Mode -->
+                            <div v-if="editingFoodId !== food.id">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900 dark:text-white">
+                                            {{ food.food_type.name }}
+                                        </div>
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ food.servings }} serving(s) • {{ Math.round(food.total_calories) }} cal
+                                        </div>
+                                        <div v-if="food.notes" class="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                            {{ food.notes }}
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ new Date(food.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                                    </div>
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ food.servings }} serving(s) • {{ Math.round(food.total_calories) }} cal
-                                </div>
-                                <div v-if="food.notes" class="text-xs text-gray-500 dark:text-gray-400 italic">
-                                    {{ food.notes }}
+                                <div class="mt-3 flex space-x-3">
+                                    <button
+                                        @click="startEditingFood(food)"
+                                        class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        @click="deleteFood(food.id)"
+                                        class="text-red-600 hover:text-red-800 text-sm font-medium"
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ new Date(food.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+
+                            <!-- Inline Edit Mode -->
+                            <div v-else class="space-y-4">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-gray-900 dark:text-white">
+                                            {{ food.food_type.name }}
+                                        </div>
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
+                                            {{ getEditedNutrition(food).calories }} cal • 
+                                            P: {{ getEditedNutrition(food).protein }}g • 
+                                            C: {{ getEditedNutrition(food).carbs }}g • 
+                                            F: {{ getEditedNutrition(food).fat }}g
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ new Date(food.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Servings
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.5"
+                                            min="0"
+                                            v-model="editForm.servings"
+                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            placeholder="e.g., 1.5"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            Notes
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="editForm.notes"
+                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            placeholder="Optional notes..."
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div class="flex space-x-3 justify-end">
+                                    <button
+                                        @click="cancelEditingFood"
+                                        class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm font-medium px-3 py-1"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        @click="saveEditFood(food)"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1 rounded"
+                                    >
+                                        Save
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
