@@ -82,4 +82,20 @@ class WorkoutController extends Controller
         return redirect()->route('workouts.index')
             ->with('success', 'Workout deleted successfully!');
     }
+
+    public function toggleExclusion(Workout $workout)
+    {
+        // Ensure the user owns this workout entry
+        if ($workout->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $workout->update([
+            'exclude_from_dataset' => ! $workout->exclude_from_dataset,
+        ]);
+
+        $status = $workout->exclude_from_dataset ? 'excluded from' : 'included in';
+
+        return back()->with('success', "Workout data {$status} dataset");
+    }
 }

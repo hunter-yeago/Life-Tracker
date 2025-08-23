@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DailyWeight;
+use App\Models\DailyDataExclusion;
 use App\Models\DietPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +32,14 @@ class DashboardController extends Controller
 
     private function getNutritionStats($user, $startOfMonth, $endOfMonth): array
     {
+        // Get excluded food dates for this user and month
+        $excludedFoodDates = DailyDataExclusion::where('user_id', $user->id)
+            ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->where('exclude_food', true)
+            ->pluck('date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->toArray();
+
         $foods = $user->foods()
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->get();
@@ -41,37 +49,67 @@ class DashboardController extends Controller
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->groupBy('date')
             ->orderBy('date')
-            ->get();
+            ->get()
+            ->reject(function ($dayData) use ($excludedFoodDates) {
+                return in_array($dayData->date, $excludedFoodDates);
+            })
+            ->values();
 
-        $daysInMonth = $startOfMonth->daysInMonth;
-        $averageCalories = $foods->count() > 0 ? round($foods->sum('total_calories') / $daysInMonth, 2) : 0;
+        // Calculate days with actual food data (excluding excluded days)
+        $daysWithFoodData = $foods->groupBy(function ($food) {
+            return Carbon::parse($food->consumed_at)->toDateString();
+        })->keys()->reject(function ($date) use ($excludedFoodDates) {
+            return in_array($date, $excludedFoodDates);
+        })->count();
+
+        $includedFoods = $foods->reject(function ($food) use ($excludedFoodDates) {
+            $foodDate = Carbon::parse($food->consumed_at)->toDateString();
+
+            return in_array($foodDate, $excludedFoodDates);
+        });
+
+        $averageCalories = $daysWithFoodData > 0 ? round($includedFoods->sum('total_calories') / $daysWithFoodData, 2) : 0;
 
         return [
-            'totalCalories' => $foods->sum('total_calories'),
-            'totalProtein' => $foods->sum('total_protein'),
-            'totalCarbs' => $foods->sum('total_carbs'),
-            'totalFat' => $foods->sum('total_fat'),
+            'totalCalories' => $includedFoods->sum('total_calories'),
+            'totalProtein' => $includedFoods->sum('total_protein'),
+            'totalCarbs' => $includedFoods->sum('total_carbs'),
+            'totalFat' => $includedFoods->sum('total_fat'),
             'caloriesByDay' => $caloriesByDay,
             'averageDailyCalories' => $averageCalories,
+            'excludedFoodDates' => $excludedFoodDates,
         ];
     }
 
     private function getWeightStats($user, $startOfMonth, $endOfMonth): array
     {
+        // Get excluded weight dates for this user and month
+        $excludedWeightDates = DailyDataExclusion::where('user_id', $user->id)
+            ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->where('exclude_weight', true)
+            ->pluck('date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->toArray();
+
         $weightData = $user->dailyWeights()
             ->select('date', 'weight')
             ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->orderBy('date')
             ->get()
+            ->reject(function ($weight) use ($excludedWeightDates) {
+                return in_array($weight->date->toDateString(), $excludedWeightDates);
+            })
             ->map(function ($weight) {
                 return [
                     'date' => $weight->date->toDateString(),
                     'weight' => (float) $weight->weight,
                 ];
-            });
+            })
+            ->values();
 
         return [
             'weightByDay' => $weightData,
+            'excludedWeightDates' => $excludedWeightDates,
         ];
     }
 

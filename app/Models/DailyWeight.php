@@ -38,20 +38,21 @@ class DailyWeight extends Model
     public static function upsertForUserAndDate(int $userId, Carbon $date, float $weight, ?string $notes = null): DailyWeight
     {
         $dateString = $date->format('Y-m-d');
-        
+
         // Try to find existing record
         $existing = static::where('user_id', $userId)
             ->whereDate('date', $dateString)
             ->first();
-            
+
         if ($existing) {
             $existing->update([
                 'weight' => $weight,
                 'notes' => $notes,
             ]);
+
             return $existing;
         }
-        
+
         // Create new record
         return static::create([
             'user_id' => $userId,

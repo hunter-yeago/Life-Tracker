@@ -247,4 +247,20 @@ class FoodController extends Controller
         return redirect()->route('foods.create', ['date' => $consumedDate])
             ->with('success', 'Food entry deleted successfully!');
     }
+
+    public function toggleExclusion(Food $food)
+    {
+        // Ensure the user owns this food entry
+        if ($food->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $food->update([
+            'exclude_from_dataset' => ! $food->exclude_from_dataset,
+        ]);
+
+        $status = $food->exclude_from_dataset ? 'excluded from' : 'included in';
+
+        return back()->with('success', "Food data {$status} dataset");
+    }
 }

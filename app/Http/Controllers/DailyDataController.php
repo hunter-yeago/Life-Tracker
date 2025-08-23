@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyDataExclusion;
 use App\Models\DailyWeight;
 use App\Models\DietPeriod;
 use App\Models\Food;
@@ -60,6 +61,9 @@ class DailyDataController extends Controller
         // Get daily weight for this date
         $dailyWeight = DailyWeight::getForUserAndDate(auth()->id(), $date);
 
+        // Get daily data exclusions for this date
+        $dailyExclusions = DailyDataExclusion::getForUserAndDate(auth()->id(), $date);
+
         return Inertia::render('DailyData/Index', [
             'selectedDate' => $selectedDate,
             'formattedDate' => $date->format('l, F j, Y'),
@@ -70,6 +74,7 @@ class DailyDataController extends Controller
             'foodTypes' => $foodTypes,
             'workoutTypes' => $workoutTypes,
             'dailyWeight' => $dailyWeight,
+            'dailyExclusions' => $dailyExclusions,
         ]);
     }
 
@@ -178,5 +183,32 @@ class DailyDataController extends Controller
         );
 
         return back()->with('success', 'Weight logged successfully');
+    }
+
+    public function toggleDayExclusion(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'data_type' => 'required|in:food,workout,weight',
+        ]);
+
+        $date = Carbon::parse($validated['date']);
+
+        DailyDataExclusion::toggleExclusion(
+            auth()->id(),
+            $date,
+            $validated['data_type']
+        );
+
+        $isExcluded = DailyDataExclusion::isExcluded(
+            auth()->id(),
+            $date,
+            $validated['data_type']
+        );
+
+        $status = $isExcluded ? 'excluded from' : 'included in';
+        $dataTypeName = ucfirst($validated['data_type']);
+
+        return back()->with('success', "{$dataTypeName} data for {$date->format('M j')} {$status} dataset");
     }
 }

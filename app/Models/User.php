@@ -66,4 +66,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(DailyWeight::class);
     }
+
+    public function dailyDataExclusions(): HasMany
+    {
+        return $this->hasMany(DailyDataExclusion::class);
+    }
 }

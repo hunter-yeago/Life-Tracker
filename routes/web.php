@@ -36,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/daily-data/weight', [DailyDataController::class, 'storeWeight'])->name('daily-data.weight');
     Route::delete('/daily-data/reset', [DailyDataController::class, 'resetDay'])->name('daily-data.reset');
 
+    // Toggle day exclusion from dataset
+    Route::patch('/daily-data/toggle-day-exclusion', [DailyDataController::class, 'toggleDayExclusion'])->name('daily-data.toggle-day-exclusion');
+
     // Diet Periods (Historical Periods System)
     Route::get('/diet-periods', [DietPeriodController::class, 'index'])->name('diet-periods.index');
     Route::post('/diet-periods', [DietPeriodController::class, 'store'])->name('diet-periods.store');

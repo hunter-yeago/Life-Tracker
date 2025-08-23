@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -77,6 +77,14 @@ interface DailyWeight {
     date: string;
 }
 
+interface DailyDataExclusion {
+    id?: number;
+    exclude_food: boolean;
+    exclude_workout: boolean;
+    exclude_weight: boolean;
+    date: string;
+}
+
 interface Props {
     selectedDate: string;
     formattedDate: string;
@@ -87,6 +95,7 @@ interface Props {
     foodTypes: FoodType[];
     workoutTypes: WorkoutType[];
     dailyWeight?: DailyWeight;
+    dailyExclusions?: DailyDataExclusion;
 }
 
 const props = defineProps<Props>();
@@ -119,6 +128,18 @@ const weightForm = useForm({
     weight: props.dailyWeight?.weight?.toString() || '',
     notes: props.dailyWeight?.notes || '',
     date: props.selectedDate,
+});
+
+// Update the form when the daily weight changes (e.g., when navigating dates)
+watch(() => props.dailyWeight, (newWeight) => {
+    weightForm.weight = newWeight?.weight?.toString() || '';
+    weightForm.notes = newWeight?.notes || '';
+    weightForm.date = props.selectedDate;
+}, { deep: true });
+
+// Also update when the selected date changes
+watch(() => props.selectedDate, (newDate) => {
+    weightForm.date = newDate;
 });
 
 const dateInput = ref<HTMLInputElement>();
@@ -193,6 +214,15 @@ function submitWeight() {
         onSuccess: () => {
             showWeightForm.value = false;
         }
+    });
+}
+
+function toggleDayExclusion(dataType: 'food' | 'workout' | 'weight') {
+    router.patch(route('daily-data.toggle-day-exclusion'), {
+        date: props.selectedDate,
+        data_type: dataType,
+    }, {
+        preserveScroll: true,
     });
 }
 
@@ -480,6 +510,67 @@ function getPhaseColor(phase: string) {
                     </div>
                 </div>
 
+                <!-- Day-Level Exclusions -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data Exclusions</h4>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Exclude entire day's data from calculations and charts. Excluded data affects averages and statistical analysis.
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">Food Data</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ dailyExclusions?.exclude_food ? 'Excluded from dataset' : 'Included in dataset' }}
+                                </div>
+                            </div>
+                            <button
+                                @click="toggleDayExclusion('food')"
+                                :class="dailyExclusions?.exclude_food 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-red-600 hover:bg-red-700 text-white'"
+                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                            >
+                                {{ dailyExclusions?.exclude_food ? 'Include' : 'Exclude' }}
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">Workout Data</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ dailyExclusions?.exclude_workout ? 'Excluded from dataset' : 'Included in dataset' }}
+                                </div>
+                            </div>
+                            <button
+                                @click="toggleDayExclusion('workout')"
+                                :class="dailyExclusions?.exclude_workout 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-red-600 hover:bg-red-700 text-white'"
+                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                            >
+                                {{ dailyExclusions?.exclude_workout ? 'Include' : 'Exclude' }}
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">Weight Data</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ dailyExclusions?.exclude_weight ? 'Excluded from dataset' : 'Included in dataset' }}
+                                </div>
+                            </div>
+                            <button
+                                @click="toggleDayExclusion('weight')"
+                                :class="dailyExclusions?.exclude_weight 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-red-600 hover:bg-red-700 text-white'"
+                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                            >
+                                {{ dailyExclusions?.exclude_weight ? 'Include' : 'Exclude' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Weight Section -->
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                     <div class="flex justify-between items-center mb-4">
@@ -541,12 +632,14 @@ function getPhaseColor(phase: string) {
                                     {{ dailyWeight.notes }}
                                 </div>
                             </div>
-                            <button
-                                @click="showWeightForm = true"
-                                class="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 text-sm font-medium"
-                            >
-                                Edit
-                            </button>
+                            <div class="flex space-x-2">
+                                <button
+                                    @click="showWeightForm = true"
+                                    class="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 text-sm font-medium"
+                                >
+                                    Edit
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -834,20 +927,22 @@ function getPhaseColor(phase: string) {
 
                     <!-- Workout List -->
                     <div v-if="workouts.length > 0" class="space-y-2">
-                        <div v-for="workout in workouts" :key="workout.id" class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <div class="font-medium text-gray-900 dark:text-white">
-                                    {{ workout.workout_type.name }}
+                        <div v-for="workout in workouts" :key="workout.id" class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="font-medium text-gray-900 dark:text-white">
+                                        {{ workout.workout_type.name }}
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ workout.duration_minutes }}min • {{ workout.intensity }} intensity • {{ Math.round(workout.calories_burned) }} cal burned
+                                    </div>
+                                    <div v-if="workout.notes" class="text-xs text-gray-500 dark:text-gray-400 italic">
+                                        {{ workout.notes }}
+                                    </div>
                                 </div>
                                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ workout.duration_minutes }}min • {{ workout.intensity }} intensity • {{ Math.round(workout.calories_burned) }} cal burned
+                                    {{ new Date(workout.workout_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                 </div>
-                                <div v-if="workout.notes" class="text-xs text-gray-500 dark:text-gray-400 italic">
-                                    {{ workout.notes }}
-                                </div>
-                            </div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ new Date(workout.workout_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                             </div>
                         </div>
                     </div>
