@@ -339,30 +339,27 @@ class ImportFoodData extends Command
         $foodType = FoodType::where('name', $item['name'])->first();
 
         if (! $foodType) {
-            // Calculate per 100g values
-            $quantity = max($item['quantity'], 1); // Avoid division by zero
-            $caloriesPer100g = ($item['calories'] / $quantity) * 100;
-            $proteinPer100g = ($item['protein'] / $quantity) * 100;
-            $carbsPer100g = ($item['carbs'] / $quantity) * 100;
-            $fatPer100g = ($item['fat'] / $quantity) * 100;
-
+            // Create serving-based food type using the total values as one serving
             $foodType = FoodType::create([
                 'name' => $item['name'],
                 'description' => $item['notes'] ? 'Imported: '.$item['notes'] : 'Imported from old data',
-                'calories_per_100g' => $caloriesPer100g,
-                'protein_per_100g' => $proteinPer100g,
-                'carbs_per_100g' => $carbsPer100g,
-                'fat_per_100g' => $fatPer100g,
                 'category' => 'Imported',
+                'serving_size_grams' => max($item['quantity'], 1), // Use the quantity as serving size
+                'calories_per_serving' => $item['calories'],
+                'protein_per_serving' => $item['protein'],
+                'carbs_per_serving' => $item['carbs'],
+                'fat_per_serving' => $item['fat'],
+                'is_one_time_item' => false,
             ]);
 
             $createdFoodType = true;
         }
 
-        // Create food entry
+        // Create food entry (1 serving = the imported portion)
         Food::create([
             'user_id' => $user->id,
             'food_type_id' => $foodType->id,
+            'servings' => 1.0, // Each imported item represents 1 serving
             'quantity_grams' => $item['quantity'],
             'total_calories' => $item['calories'],
             'total_protein' => $item['protein'],
