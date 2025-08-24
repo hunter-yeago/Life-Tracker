@@ -94,6 +94,8 @@ watch(
 function createCalorieChart() {
     if (!calorieChart.value) return;
     
+    console.log('Creating calorie chart with data:', props.nutritionStats.caloriesByDay);
+    
     const margin = { top: 60, right: 30, bottom: 40, left: 60 };
     const containerWidth = Math.min(calorieChart.value.clientWidth, calorieChart.value.parentElement?.clientWidth || 800);
     const width = containerWidth - margin.left - margin.right;
@@ -121,6 +123,8 @@ function createCalorieChart() {
         calories: d.calories,
         notes: d.notes || []
     })).filter(d => d.date !== null);
+    
+    console.log('Processed calorie data for chart:', processedData);
 
     const x = d3.scaleTime()
         .domain(d3.extent(processedData, d => d.date) as [Date, Date])
@@ -234,7 +238,6 @@ function createCalorieChart() {
         .attr('fill', '#10B981')
         .style('cursor', 'pointer')
         .on('mouseover', function(event, d) {
-            console.log('Hovering over calorie data point:', d);
             d3.select(this).attr('r', 6);
             
             const formatTooltipDate = d3.timeFormat('%B %d, %Y');
@@ -270,6 +273,8 @@ function createCalorieChart() {
             d3.select(this).attr('r', 4);
             tooltip.transition().duration(200).style('opacity', 0);
         });
+
+    console.log('Added hover events to', processedData.length, 'calorie data points');
 
     // Add axes with improved styling
     svg.append('g')

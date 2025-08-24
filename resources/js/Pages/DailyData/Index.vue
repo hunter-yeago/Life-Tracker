@@ -34,7 +34,6 @@ interface Food {
     total_protein: number;
     total_carbs: number;
     total_fat: number;
-    consumed_at: string;
     notes?: string;
 }
 
@@ -113,7 +112,6 @@ const foodForm = useForm({
     food_type_id: '',
     servings: '1',
     notes: '',
-    consumed_at: props.selectedDate + 'T12:00',
 });
 
 const workoutForm = useForm({
@@ -188,11 +186,14 @@ function handleDateKeydown(event: KeyboardEvent) {
 
 function submitFood() {
     foodForm.post(route('daily-data.food'), {
+        data: {
+            ...foodForm.data(),
+            date: props.selectedDate
+        },
         onSuccess: () => {
             showFoodForm.value = false;
             foodForm.reset('food_type_id', 'servings', 'notes');
             foodForm.servings = '1';
-            foodForm.consumed_at = props.selectedDate + 'T12:00';
         }
     });
 }
@@ -570,7 +571,7 @@ function getPhaseColor(phase: string) {
                     <!-- Food Form -->
                     <div v-if="showFoodForm" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <form @submit.prevent="submitFood" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <InputLabel for="food_type_id" value="Food Type" />
                                     <select
@@ -600,17 +601,6 @@ function getPhaseColor(phase: string) {
                                         required
                                     />
                                     <InputError :message="foodForm.errors.servings" />
-                                </div>
-                                <div>
-                                    <InputLabel for="consumed_at" value="Time Consumed" />
-                                    <TextInput
-                                        id="consumed_at"
-                                        type="datetime-local"
-                                        v-model="foodForm.consumed_at"
-                                        class="w-full"
-                                        required
-                                    />
-                                    <InputError :message="foodForm.errors.consumed_at" />
                                 </div>
                             </div>
                             <div>
@@ -655,9 +645,6 @@ function getPhaseColor(phase: string) {
                                             {{ food.notes }}
                                         </div>
                                     </div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ new Date(food.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-                                    </div>
                                 </div>
                                 <div class="mt-3 flex space-x-3">
                                     <button
@@ -688,9 +675,6 @@ function getPhaseColor(phase: string) {
                                             C: {{ getEditedNutrition(food).carbs }}g • 
                                             F: {{ getEditedNutrition(food).fat }}g
                                         </div>
-                                    </div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ new Date(food.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                     </div>
                                 </div>
                                 

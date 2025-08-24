@@ -84,13 +84,16 @@ class DailyDataController extends Controller
             'food_type_id' => 'required|exists:food_types,id',
             'servings' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
-            'consumed_at' => 'required|date',
         ]);
 
         $foodType = FoodType::findOrFail($validated['food_type_id']);
 
         // Calculate totals based on servings
         $quantityGrams = $validated['servings'] * $foodType->serving_size_grams;
+
+        // Use the selected date from the daily data page
+        $selectedDate = $request->get('date', now()->toDateString());
+        $consumedAt = Carbon::parse($selectedDate)->setTime(12, 0, 0);
 
         Food::create([
             'user_id' => auth()->id(),
@@ -101,7 +104,7 @@ class DailyDataController extends Controller
             'total_protein' => $validated['servings'] * $foodType->protein_per_serving,
             'total_carbs' => $validated['servings'] * $foodType->carbs_per_serving,
             'total_fat' => $validated['servings'] * $foodType->fat_per_serving,
-            'consumed_at' => $validated['consumed_at'],
+            'consumed_at' => $consumedAt,
             'notes' => $validated['notes'],
         ]);
 
