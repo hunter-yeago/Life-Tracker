@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -81,6 +81,9 @@ interface DailyDataExclusion {
     exclude_food: boolean;
     exclude_workout: boolean;
     exclude_weight: boolean;
+    food_notes?: string;
+    workout_notes?: string;
+    weight_notes?: string;
     date: string;
 }
 
@@ -142,6 +145,40 @@ watch(() => props.selectedDate, (newDate) => {
 
 const dateInput = ref<HTMLInputElement>();
 
+// Exclusion form states
+const showExclusionForms = ref({
+    food: false,
+    workout: false,
+    weight: false,
+});
+
+const exclusionForms = reactive({
+    food: {
+        excluded: props.dailyExclusions?.exclude_food || false,
+        note: props.dailyExclusions?.food_notes || '',
+    },
+    workout: {
+        excluded: props.dailyExclusions?.exclude_workout || false,
+        note: props.dailyExclusions?.workout_notes || '',
+    },
+    weight: {
+        excluded: props.dailyExclusions?.exclude_weight || false,
+        note: props.dailyExclusions?.weight_notes || '',
+    },
+});
+
+// Update exclusion forms when daily exclusions change
+watch(() => props.dailyExclusions, (newExclusions) => {
+    if (newExclusions) {
+        exclusionForms.food.excluded = newExclusions.exclude_food || false;
+        exclusionForms.food.note = newExclusions.food_notes || '';
+        exclusionForms.workout.excluded = newExclusions.exclude_workout || false;
+        exclusionForms.workout.note = newExclusions.workout_notes || '';
+        exclusionForms.weight.excluded = newExclusions.exclude_weight || false;
+        exclusionForms.weight.note = newExclusions.weight_notes || '';
+    }
+}, { deep: true });
+
 function changeDate(event: Event) {
     const target = event.target as HTMLInputElement;
     router.get(route('daily-data.index'), { date: target.value }, {
@@ -185,11 +222,13 @@ function handleDateKeydown(event: KeyboardEvent) {
 
 
 function submitFood() {
+    // Set the date in the form data
+    foodForm.transform((data) => ({
+        ...data,
+        date: props.selectedDate
+    }));
+    
     foodForm.post(route('daily-data.food'), {
-        data: {
-            ...foodForm.data(),
-            date: props.selectedDate
-        },
         onSuccess: () => {
             showFoodForm.value = false;
             foodForm.reset('food_type_id', 'servings', 'notes');
@@ -225,6 +264,45 @@ function toggleDayExclusion(dataType: 'food' | 'workout' | 'weight') {
     }, {
         preserveScroll: true,
     });
+}
+
+function toggleExclusionForm(dataType: 'food' | 'workout' | 'weight') {
+    showExclusionForms.value[dataType] = !showExclusionForms.value[dataType];
+}
+
+function saveExclusion(dataType: 'food' | 'workout' | 'weight') {
+    const formData = exclusionForms[dataType];
+    
+    router.patch(route('daily-data.toggle-day-exclusion'), {
+        date: props.selectedDate,
+        data_type: dataType,
+        excluded: formData.excluded,
+        note: formData.note,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showExclusionForms.value[dataType] = false;
+        }
+    });
+}
+
+function cancelExclusion(dataType: 'food' | 'workout' | 'weight') {
+    // Reset form to current state
+    const exclusions = props.dailyExclusions;
+    if (exclusions) {
+        // Reset excluded state
+        if (dataType === 'food') {
+            exclusionForms.food.excluded = exclusions.exclude_food || false;
+            exclusionForms.food.note = exclusions.food_notes || '';
+        } else if (dataType === 'workout') {
+            exclusionForms.workout.excluded = exclusions.exclude_workout || false;
+            exclusionForms.workout.note = exclusions.workout_notes || '';
+        } else if (dataType === 'weight') {
+            exclusionForms.weight.excluded = exclusions.exclude_weight || false;
+            exclusionForms.weight.note = exclusions.weight_notes || '';
+        }
+    }
+    showExclusionForms.value[dataType] = false;
 }
 
 function resetDay() {
@@ -267,8 +345,7 @@ function saveEditFood(food: Food) {
             editingFoodId.value = null;
             router.reload({ 
                 only: ['foods', 'dailyTotals'],
-                preserveState: true,
-                preserveScroll: true 
+                preserveUrl: true 
             });
         },
         onError: (errors) => {
@@ -283,8 +360,7 @@ function deleteFood(foodId: number) {
             onSuccess: () => {
                 router.reload({ 
                     only: ['foods', 'dailyTotals'],
-                    preserveState: true,
-                    preserveScroll: true 
+                    preserveUrl: true 
                 });
             }
         });
@@ -427,57 +503,218 @@ function getPhaseColor(phase: string) {
                     <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         Exclude entire day's data from calculations and charts. Excluded data affects averages and statistical analysis.
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <div class="font-medium text-gray-900 dark:text-white">Food Data</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ dailyExclusions?.exclude_food ? 'Excluded from dataset' : 'Included in dataset' }}
+                    <div class="space-y-4">
+                        <!-- Food Data Exclusion -->
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Food Data</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ dailyExclusions?.exclude_food ? 'Excluded from dataset' : 'Included in dataset' }}
+                                        {{ dailyExclusions?.food_notes ? ' • Has note' : '' }}
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        @click="toggleExclusionForm('food')"
+                                        class="px-3 py-1 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                                    >
+                                        {{ showExclusionForms.food ? 'Cancel' : 'Edit' }}
+                                    </button>
+                                    <button
+                                        @click="toggleDayExclusion('food')"
+                                        :class="dailyExclusions?.exclude_food 
+                                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                            : 'bg-red-600 hover:bg-red-700 text-white'"
+                                        class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                                    >
+                                        {{ dailyExclusions?.exclude_food ? 'Include' : 'Exclude' }}
+                                    </button>
                                 </div>
                             </div>
-                            <button
-                                @click="toggleDayExclusion('food')"
-                                :class="dailyExclusions?.exclude_food 
-                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                    : 'bg-red-600 hover:bg-red-700 text-white'"
-                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-                            >
-                                {{ dailyExclusions?.exclude_food ? 'Include' : 'Exclude' }}
-                            </button>
+                            <div v-if="showExclusionForms.food" class="p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input 
+                                                v-model="exclusionForms.food.excluded"
+                                                type="checkbox" 
+                                                class="rounded border-gray-300 text-red-600 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600"
+                                            >
+                                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Exclude food data from calculations
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Exclusion Note (optional)
+                                        </label>
+                                        <textarea 
+                                            v-model="exclusionForms.food.note"
+                                            rows="2" 
+                                            class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500" 
+                                            placeholder="Why is this day excluded? (e.g., incomplete data, special circumstances)"
+                                        ></textarea>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button 
+                                            @click="saveExclusion('food')"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Save
+                                        </button>
+                                        <button 
+                                            @click="cancelExclusion('food')"
+                                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <div class="font-medium text-gray-900 dark:text-white">Workout Data</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ dailyExclusions?.exclude_workout ? 'Excluded from dataset' : 'Included in dataset' }}
+
+                        <!-- Workout Data Exclusion -->
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Workout Data</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ dailyExclusions?.exclude_workout ? 'Excluded from dataset' : 'Included in dataset' }}
+                                        {{ dailyExclusions?.workout_notes ? ' • Has note' : '' }}
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        @click="toggleExclusionForm('workout')"
+                                        class="px-3 py-1 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                                    >
+                                        {{ showExclusionForms.workout ? 'Cancel' : 'Edit' }}
+                                    </button>
+                                    <button
+                                        @click="toggleDayExclusion('workout')"
+                                        :class="dailyExclusions?.exclude_workout 
+                                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                            : 'bg-red-600 hover:bg-red-700 text-white'"
+                                        class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                                    >
+                                        {{ dailyExclusions?.exclude_workout ? 'Include' : 'Exclude' }}
+                                    </button>
                                 </div>
                             </div>
-                            <button
-                                @click="toggleDayExclusion('workout')"
-                                :class="dailyExclusions?.exclude_workout 
-                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                    : 'bg-red-600 hover:bg-red-700 text-white'"
-                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-                            >
-                                {{ dailyExclusions?.exclude_workout ? 'Include' : 'Exclude' }}
-                            </button>
+                            <div v-if="showExclusionForms.workout" class="p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input 
+                                                v-model="exclusionForms.workout.excluded"
+                                                type="checkbox" 
+                                                class="rounded border-gray-300 text-red-600 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600"
+                                            >
+                                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Exclude workout data from calculations
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Exclusion Note (optional)
+                                        </label>
+                                        <textarea 
+                                            v-model="exclusionForms.workout.note"
+                                            rows="2" 
+                                            class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500" 
+                                            placeholder="Why is this day excluded? (e.g., incomplete data, special circumstances)"
+                                        ></textarea>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button 
+                                            @click="saveExclusion('workout')"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Save
+                                        </button>
+                                        <button 
+                                            @click="cancelExclusion('workout')"
+                                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div>
-                                <div class="font-medium text-gray-900 dark:text-white">Weight Data</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ dailyExclusions?.exclude_weight ? 'Excluded from dataset' : 'Included in dataset' }}
+
+                        <!-- Weight Data Exclusion -->
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">Weight Data</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ dailyExclusions?.exclude_weight ? 'Excluded from dataset' : 'Included in dataset' }}
+                                        {{ dailyExclusions?.weight_notes ? ' • Has note' : '' }}
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        @click="toggleExclusionForm('weight')"
+                                        class="px-3 py-1 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                                    >
+                                        {{ showExclusionForms.weight ? 'Cancel' : 'Edit' }}
+                                    </button>
+                                    <button
+                                        @click="toggleDayExclusion('weight')"
+                                        :class="dailyExclusions?.exclude_weight 
+                                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                            : 'bg-red-600 hover:bg-red-700 text-white'"
+                                        class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+                                    >
+                                        {{ dailyExclusions?.exclude_weight ? 'Include' : 'Exclude' }}
+                                    </button>
                                 </div>
                             </div>
-                            <button
-                                @click="toggleDayExclusion('weight')"
-                                :class="dailyExclusions?.exclude_weight 
-                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                    : 'bg-red-600 hover:bg-red-700 text-white'"
-                                class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-                            >
-                                {{ dailyExclusions?.exclude_weight ? 'Include' : 'Exclude' }}
-                            </button>
+                            <div v-if="showExclusionForms.weight" class="p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="flex items-center">
+                                            <input 
+                                                v-model="exclusionForms.weight.excluded"
+                                                type="checkbox" 
+                                                class="rounded border-gray-300 text-red-600 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600"
+                                            >
+                                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Exclude weight data from calculations
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Exclusion Note (optional)
+                                        </label>
+                                        <textarea 
+                                            v-model="exclusionForms.weight.note"
+                                            rows="2" 
+                                            class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500" 
+                                            placeholder="Why is this day excluded? (e.g., incomplete data, special circumstances)"
+                                        ></textarea>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button 
+                                            @click="saveExclusion('weight')"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Save
+                                        </button>
+                                        <button 
+                                            @click="cancelExclusion('weight')"
+                                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

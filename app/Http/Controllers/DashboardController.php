@@ -47,12 +47,16 @@ class DashboardController extends Controller
     private function getNutritionStats($user, $startOfMonth, $endOfMonth): array
     {
         // Get excluded food dates for this user and month
-        $excludedFoodDates = DailyDataExclusion::where('user_id', $user->id)
+        $excludedFoodData = DailyDataExclusion::where('user_id', $user->id)
             ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->where('exclude_food', true)
-            ->pluck('date')
-            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->get(['date', 'food_notes'])
+            ->mapWithKeys(function ($exclusion) {
+                return [Carbon::parse($exclusion->date)->toDateString() => $exclusion->food_notes];
+            })
             ->toArray();
+        
+        $excludedFoodDates = array_keys($excludedFoodData);
 
         $foods = $user->foods()
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
@@ -103,18 +107,23 @@ class DashboardController extends Controller
             'caloriesByDay' => $caloriesByDay,
             'averageDailyCalories' => $averageCalories,
             'excludedFoodDates' => $excludedFoodDates,
+            'excludedFoodData' => $excludedFoodData,
         ];
     }
 
     private function getWeightStats($user, $startOfMonth, $endOfMonth): array
     {
         // Get excluded weight dates for this user and month
-        $excludedWeightDates = DailyDataExclusion::where('user_id', $user->id)
+        $excludedWeightData = DailyDataExclusion::where('user_id', $user->id)
             ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->where('exclude_weight', true)
-            ->pluck('date')
-            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->get(['date', 'weight_notes'])
+            ->mapWithKeys(function ($exclusion) {
+                return [Carbon::parse($exclusion->date)->toDateString() => $exclusion->weight_notes];
+            })
             ->toArray();
+        
+        $excludedWeightDates = array_keys($excludedWeightData);
 
         $weightData = $user->dailyWeights()
             ->select('date', 'weight', 'notes')
@@ -136,6 +145,7 @@ class DashboardController extends Controller
         return [
             'weightByDay' => $weightData,
             'excludedWeightDates' => $excludedWeightDates,
+            'excludedWeightData' => $excludedWeightData,
         ];
     }
 

@@ -14,7 +14,9 @@ class DailyDataExclusion extends Model
         'exclude_food',
         'exclude_workout',
         'exclude_weight',
-        'notes',
+        'food_notes',
+        'workout_notes',
+        'weight_notes',
     ];
 
     protected function casts(): array
@@ -41,19 +43,20 @@ class DailyDataExclusion extends Model
 
     public static function toggleExclusion(int $userId, Carbon $date, string $dataType): void
     {
-        $dateString = $date->format('Y-m-d');
-        
-        $exclusion = static::updateOrCreate(
-            [
+        // Find existing record or create new one
+        $exclusion = static::where('user_id', $userId)
+            ->whereDate('date', $date->format('Y-m-d'))
+            ->first();
+
+        if (!$exclusion) {
+            $exclusion = static::create([
                 'user_id' => $userId,
-                'date' => $dateString,
-            ],
-            [
+                'date' => $date->format('Y-m-d'),
                 'exclude_food' => false,
                 'exclude_workout' => false,
                 'exclude_weight' => false,
-            ]
-        );
+            ]);
+        }
 
         $columnName = "exclude_{$dataType}";
         $exclusion->update([
@@ -71,5 +74,42 @@ class DailyDataExclusion extends Model
         $columnName = "exclude_{$dataType}";
 
         return $exclusion->$columnName;
+    }
+
+    public static function setExclusionWithNote(int $userId, Carbon $date, string $dataType, bool $excluded, ?string $note = null): void
+    {
+        // Find existing record or create new one
+        $exclusion = static::where('user_id', $userId)
+            ->whereDate('date', $date->format('Y-m-d'))
+            ->first();
+
+        if (!$exclusion) {
+            $exclusion = static::create([
+                'user_id' => $userId,
+                'date' => $date->format('Y-m-d'),
+                'exclude_food' => false,
+                'exclude_workout' => false,
+                'exclude_weight' => false,
+            ]);
+        }
+
+        $columnName = "exclude_{$dataType}";
+        $noteColumnName = "{$dataType}_notes";
+        
+        $exclusion->update([
+            $columnName => $excluded,
+            $noteColumnName => $excluded ? $note : null, // Clear note if not excluded
+        ]);
+    }
+
+    public static function getExclusionNote(int $userId, Carbon $date, string $dataType): ?string
+    {
+        $exclusion = static::getForUserAndDate($userId, $date);
+        if (! $exclusion) {
+            return null;
+        }
+
+        $noteColumnName = "{$dataType}_notes";
+        return $exclusion->$noteColumnName;
     }
 }

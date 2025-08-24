@@ -193,21 +193,35 @@ class DailyDataController extends Controller
         $validated = $request->validate([
             'date' => 'required|date',
             'data_type' => 'required|in:food,workout,weight',
+            'excluded' => 'nullable|boolean',
+            'note' => 'nullable|string|max:1000',
         ]);
 
         $date = Carbon::parse($validated['date']);
 
-        DailyDataExclusion::toggleExclusion(
-            auth()->id(),
-            $date,
-            $validated['data_type']
-        );
-
-        $isExcluded = DailyDataExclusion::isExcluded(
-            auth()->id(),
-            $date,
-            $validated['data_type']
-        );
+        // If excluded and note are provided, set the exclusion with note
+        if (isset($validated['excluded'])) {
+            DailyDataExclusion::setExclusionWithNote(
+                auth()->id(),
+                $date,
+                $validated['data_type'],
+                $validated['excluded'],
+                $validated['note'] ?? null
+            );
+            $isExcluded = $validated['excluded'];
+        } else {
+            // Otherwise, toggle the current state (for backwards compatibility)
+            DailyDataExclusion::toggleExclusion(
+                auth()->id(),
+                $date,
+                $validated['data_type']
+            );
+            $isExcluded = DailyDataExclusion::isExcluded(
+                auth()->id(),
+                $date,
+                $validated['data_type']
+            );
+        }
 
         $status = $isExcluded ? 'excluded from' : 'included in';
         $dataTypeName = ucfirst($validated['data_type']);
