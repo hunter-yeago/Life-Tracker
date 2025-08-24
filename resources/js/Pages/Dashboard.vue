@@ -127,7 +127,7 @@ function createCalorieChart() {
     const margin = { top: 60, right: 30, bottom: 40, left: 60 };
     const containerWidth = Math.min(calorieChart.value.clientWidth, calorieChart.value.parentElement?.clientWidth || 800);
     const width = containerWidth - margin.left - margin.right;
-    const height = 300 - margin.top - margin.bottom;
+    const height = 350 - margin.top - margin.bottom;
 
     // Clear previous chart and tooltips
     d3.select(calorieChart.value).selectAll('*').remove();
@@ -158,8 +158,16 @@ function createCalorieChart() {
         .domain(d3.extent(processedData, d => d.date) as [Date, Date])
         .range([0, width]);
 
+    const maxCalories = d3.max(processedData, d => d.calories) || 0;
+    const minCalories = d3.min(processedData, d => d.calories) || 0;
+    
+    // Add 30% buffer to top and bottom, rounded to nearest whole number
+    const buffer = (maxCalories - minCalories) * 0.3;
+    const yMin = Math.max(0, Math.round(minCalories - buffer));
+    const yMax = Math.round(maxCalories + buffer);
+    
     const y = d3.scaleLinear()
-        .domain([0, d3.max(processedData, d => d.calories) || 0])
+        .domain([yMin, yMax])
         .range([height, 0]);
 
     // Determine if we're in dark mode
@@ -349,7 +357,7 @@ function createWeightChart() {
     const margin = { top: 60, right: 30, bottom: 40, left: 60 };
     const containerWidth = Math.min(weightChart.value.clientWidth, weightChart.value.parentElement?.clientWidth || 800);
     const width = containerWidth - margin.left - margin.right;
-    const height = 300 - margin.top - margin.bottom;
+    const height = 350 - margin.top - margin.bottom;
 
     // Clear previous chart and tooltips
     d3.select(weightChart.value).selectAll('*').remove();
@@ -378,8 +386,16 @@ function createWeightChart() {
         .domain(d3.extent(processedData, d => d.date) as [Date, Date])
         .range([0, width]);
 
+    const maxWeight = d3.max(processedData, d => d.weight) || 0;
+    const minWeight = d3.min(processedData, d => d.weight) || 0;
+    
+    // Add 30% buffer to top and bottom, rounded to nearest whole number
+    const buffer = (maxWeight - minWeight) * 0.3;
+    const yMin = Math.round(minWeight - buffer);
+    const yMax = Math.round(maxWeight + buffer);
+    
     const y = d3.scaleLinear()
-        .domain(d3.extent(processedData, d => d.weight) as [number, number])
+        .domain([yMin, yMax])
         .range([height, 0]);
 
     // Determine if we're in dark mode
