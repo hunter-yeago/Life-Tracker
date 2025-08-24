@@ -15,18 +15,32 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $month = request('month', Carbon::now()->format('Y-m'));
-        $startOfMonth = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        $endOfMonth = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+        $dietPeriodId = request('diet_period_id');
+        
+        // Determine date range - either by month or by diet period
+        if ($dietPeriodId) {
+            $dietPeriod = DietPeriod::where('user_id', $user->id)->findOrFail($dietPeriodId);
+            $startDate = $dietPeriod->start_date;
+            $endDate = $dietPeriod->end_date ?: Carbon::now()->endOfDay();
+        } else {
+            $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+            $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+        }
 
-        $nutritionStats = $this->getNutritionStats($user, $startOfMonth, $endOfMonth);
-        $weightStats = $this->getWeightStats($user, $startOfMonth, $endOfMonth);
-        $dietPeriods = $this->getDietPeriods($user, $startOfMonth, $endOfMonth);
+        $nutritionStats = $this->getNutritionStats($user, $startDate, $endDate);
+        $weightStats = $this->getWeightStats($user, $startDate, $endDate);
+        $dietPeriods = $this->getAllDietPeriods($user);
 
         return Inertia::render('Dashboard', [
             'nutritionStats' => $nutritionStats,
             'weightStats' => $weightStats,
             'currentMonth' => $month,
             'dietPeriods' => $dietPeriods,
+            'selectedDietPeriodId' => $dietPeriodId ? (int) $dietPeriodId : null,
+            'dateRange' => [
+                'start' => $startDate->toDateString(),
+                'end' => $endDate->toDateString(),
+            ],
         ]);
     }
 
@@ -123,6 +137,26 @@ class DashboardController extends Controller
             'weightByDay' => $weightData,
             'excludedWeightDates' => $excludedWeightDates,
         ];
+    }
+
+    private function getAllDietPeriods($user): array
+    {
+        // Get all diet periods for the user for the dropdown
+        $periods = DietPeriod::where('user_id', $user->id)
+            ->orderBy('start_date', 'desc')
+            ->get();
+
+        return $periods->map(function ($period) {
+            return [
+                'id' => $period->id,
+                'name' => $period->name,
+                'phase_type' => $period->phase_type,
+                'start_date' => $period->start_date->toDateString(),
+                'end_date' => $period->end_date?->toDateString(),
+                'target_calories' => $period->target_calories,
+                'target_protein' => $period->target_protein,
+            ];
+        })->values()->toArray();
     }
 
     private function getDietPeriods($user, $startOfMonth, $endOfMonth): array

@@ -29,6 +29,11 @@ interface Props {
     };
     currentMonth: string;
     dietPeriods: DietPeriod[];
+    selectedDietPeriodId?: number | null;
+    dateRange: {
+        start: string;
+        end: string;
+    };
 }
 
 const props = defineProps<Props>();
@@ -52,6 +57,29 @@ const monthOptions = computed(() => {
 function changeMonth(month: string) {
     router.get('/dashboard', { month }, { preserveState: true });
 }
+
+function changeDietPeriod(dietPeriodId: string) {
+    if (dietPeriodId === '') {
+        // Show current month when no diet period selected
+        router.get('/dashboard', { month: props.currentMonth }, { preserveState: true });
+    } else {
+        router.get('/dashboard', { diet_period_id: dietPeriodId }, { preserveState: true });
+    }
+}
+
+const currentViewType = computed(() => {
+    return props.selectedDietPeriodId ? 'diet-period' : 'month';
+});
+
+const currentViewLabel = computed(() => {
+    if (props.selectedDietPeriodId) {
+        const selectedPeriod = props.dietPeriods.find(p => p.id === props.selectedDietPeriodId);
+        return selectedPeriod ? selectedPeriod.name : 'Unknown Period';
+    } else {
+        const month = monthOptions.value.find(m => m.value === props.currentMonth);
+        return month ? month.label : 'Current Month';
+    }
+});
 
 onMounted(() => {
     if (calorieChart.value && props.nutritionStats.caloriesByDay.length > 0) {
@@ -513,18 +541,66 @@ function createWeightChart() {
     <AuthenticatedLayout>
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Life Tracker Dashboard
-                </h2>
-                <select 
-                    :value="currentMonth" 
-                    @change="changeMonth(($event.target as HTMLSelectElement).value)"
-                    class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                >
-                    <option v-for="month in monthOptions" :key="month.value" :value="month.value">
-                        {{ month.label }}
-                    </option>
-                </select>
+                <div>
+                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                        Life Tracker Dashboard
+                    </h2>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {{ currentViewLabel }} ({{ dateRange.start }} to {{ dateRange.end }})
+                    </p>
+                </div>
+                <div class="flex gap-4">
+                    <!-- View Type Toggle -->
+                    <div class="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+                        <button
+                            @click="changeMonth(currentMonth)"
+                            :class="[
+                                'px-3 py-2 text-sm font-medium transition-colors',
+                                currentViewType === 'month' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ]"
+                        >
+                            Month
+                        </button>
+                        <button
+                            @click="changeDietPeriod(props.dietPeriods[0]?.id?.toString() || '')"
+                            :class="[
+                                'px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600',
+                                currentViewType === 'diet-period' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ]"
+                        >
+                            Diet Period
+                        </button>
+                    </div>
+
+                    <!-- Month Selector (when in month view) -->
+                    <select 
+                        v-if="currentViewType === 'month'"
+                        :value="currentMonth" 
+                        @change="changeMonth(($event.target as HTMLSelectElement).value)"
+                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                    >
+                        <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                            {{ month.label }}
+                        </option>
+                    </select>
+
+                    <!-- Diet Period Selector (when in diet period view) -->
+                    <select 
+                        v-if="currentViewType === 'diet-period'"
+                        :value="selectedDietPeriodId?.toString() || ''" 
+                        @change="changeDietPeriod(($event.target as HTMLSelectElement).value)"
+                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                    >
+                        <option value="">All Time</option>
+                        <option v-for="period in dietPeriods" :key="period.id" :value="period.id.toString()">
+                            {{ period.name }}
+                        </option>
+                    </select>
+                </div>
             </div>
         </template>
 
