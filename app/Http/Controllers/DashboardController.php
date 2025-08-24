@@ -45,13 +45,24 @@ class DashboardController extends Controller
             ->get();
 
         $caloriesByDay = $user->foods()
-            ->select(DB::raw('DATE(consumed_at) as date'), DB::raw('SUM(total_calories) as calories'))
+            ->select(
+                DB::raw('DATE(consumed_at) as date'), 
+                DB::raw('SUM(total_calories) as calories'),
+                DB::raw("GROUP_CONCAT(CASE WHEN notes IS NOT NULL AND notes != '' THEN notes ELSE NULL END) as notes")
+            )
             ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
             ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->reject(function ($dayData) use ($excludedFoodDates) {
                 return in_array($dayData->date, $excludedFoodDates);
+            })
+            ->map(function ($dayData) {
+                return [
+                    'date' => $dayData->date,
+                    'calories' => $dayData->calories,
+                    'notes' => $dayData->notes ? explode(',', $dayData->notes) : []
+                ];
             })
             ->values();
 
@@ -92,7 +103,7 @@ class DashboardController extends Controller
             ->toArray();
 
         $weightData = $user->dailyWeights()
-            ->select('date', 'weight')
+            ->select('date', 'weight', 'notes')
             ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->orderBy('date')
             ->get()
@@ -103,6 +114,7 @@ class DashboardController extends Controller
                 return [
                     'date' => $weight->date->toDateString(),
                     'weight' => (float) $weight->weight,
+                    'notes' => $weight->notes,
                 ];
             })
             ->values();

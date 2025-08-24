@@ -41,19 +41,19 @@ class DailyDataExclusion extends Model
 
     public static function toggleExclusion(int $userId, Carbon $date, string $dataType): void
     {
-        $exclusion = static::where('user_id', $userId)
-            ->whereDate('date', $date->format('Y-m-d'))
-            ->first();
-
-        if (!$exclusion) {
-            $exclusion = static::create([
+        $dateString = $date->format('Y-m-d');
+        
+        $exclusion = static::updateOrCreate(
+            [
                 'user_id' => $userId,
-                'date' => $date->format('Y-m-d'),
+                'date' => $dateString,
+            ],
+            [
                 'exclude_food' => false,
                 'exclude_workout' => false,
                 'exclude_weight' => false,
-            ]);
-        }
+            ]
+        );
 
         $columnName = "exclude_{$dataType}";
         $exclusion->update([
