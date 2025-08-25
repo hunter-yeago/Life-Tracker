@@ -17,6 +17,16 @@ class DashboardController extends Controller
         $month = request('month', Carbon::now()->format('Y-m'));
         $dietPeriodId = request('diet_period_id');
         
+        // If no specific view is requested, default to diet period view
+        if (!$dietPeriodId && !request('month')) {
+            $latestDietPeriod = DietPeriod::where('user_id', $user->id)
+                ->orderBy('start_date', 'desc')
+                ->first();
+            if ($latestDietPeriod) {
+                $dietPeriodId = $latestDietPeriod->id;
+            }
+        }
+        
         // Determine date range - either by month or by diet period
         if ($dietPeriodId) {
             $dietPeriod = DietPeriod::where('user_id', $user->id)->findOrFail($dietPeriodId);

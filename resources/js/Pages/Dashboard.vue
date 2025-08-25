@@ -664,26 +664,26 @@ function createWeightChart() {
                     <!-- View Type Toggle -->
                     <div class="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
                         <button
-                            @click="changeMonth(currentMonth)"
-                            :class="[
-                                'px-3 py-2 text-sm font-medium transition-colors',
-                                currentViewType === 'month' 
-                                    ? 'bg-blue-600 text-white' 
-                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            ]"
-                        >
-                            Month
-                        </button>
-                        <button
                             @click="changeDietPeriod(props.dietPeriods[0]?.id?.toString() || '')"
                             :class="[
-                                'px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600',
+                                'px-3 py-2 text-sm font-medium transition-colors',
                                 currentViewType === 'diet-period' 
                                     ? 'bg-blue-600 text-white' 
                                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                             ]"
                         >
                             Diet Period
+                        </button>
+                        <button
+                            @click="changeMonth(currentMonth)"
+                            :class="[
+                                'px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600',
+                                currentViewType === 'month' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ]"
+                        >
+                            Month
                         </button>
                     </div>
 
