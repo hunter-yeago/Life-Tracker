@@ -230,10 +230,19 @@ function submitFood() {
     
     foodForm.post(route('daily-data.food'), {
         onSuccess: () => {
-            showFoodForm.value = false;
+            // Keep the form open and reset only the fields for next entry
             foodForm.reset('food_type_id', 'servings', 'notes');
             foodForm.servings = '1';
-        }
+            
+            // Focus back on food type selector for quick next entry
+            setTimeout(() => {
+                const foodTypeSelect = document.querySelector('#food_type_id') as HTMLSelectElement;
+                if (foodTypeSelect) {
+                    foodTypeSelect.focus();
+                }
+            }, 100);
+        },
+        preserveScroll: true
     });
 }
 
@@ -387,23 +396,13 @@ const estimatedFoodCalories = computed(() => {
     return Math.round(selectedFoodType.value.calories_per_serving * Number(foodForm.servings));
 });
 
+
 const selectedWorkoutType = computed(() => {
     if (!workoutForm.workout_type_id) return null;
     return props.workoutTypes.find(wt => wt.id == Number(workoutForm.workout_type_id));
 });
 
-const estimatedCaloriesBurned = computed(() => {
-    if (!selectedWorkoutType.value) return 0;
-    const intensityMultipliers = { low: 0.8, moderate: 1.0, high: 1.2 };
-    const multiplier = intensityMultipliers[workoutForm.intensity as keyof typeof intensityMultipliers];
-    return Math.round(selectedWorkoutType.value.calories_per_minute * Number(workoutForm.duration_minutes) * multiplier);
-});
 
-const netCalories = computed(() => {
-    const caloriesConsumed = props.dailyTotals.calories;
-    const caloriesBurned = props.workouts.reduce((sum, w) => sum + w.calories_burned, 0);
-    return Math.round(caloriesConsumed - caloriesBurned);
-});
 
 function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -478,21 +477,21 @@ function getPhaseColor(phase: string) {
                         </div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Calories Burned</div>
-                        <div class="text-2xl font-bold text-red-600">
-                            {{ Math.round(workouts.reduce((sum, w) => sum + w.calories_burned, 0)) }}
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">Net Calories</div>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                            {{ netCalories }}
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Protein</div>
                         <div class="text-2xl font-bold text-blue-600">
                             {{ Math.round(dailyTotals.protein) }}g
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Carbs</div>
+                        <div class="text-2xl font-bold text-orange-600">
+                            {{ Math.round(dailyTotals.carbs) }}g
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Fat</div>
+                        <div class="text-2xl font-bold text-purple-600">
+                            {{ Math.round(dailyTotals.fat) }}g
                         </div>
                     </div>
                 </div>
@@ -854,13 +853,18 @@ function getPhaseColor(phase: string) {
                                     Estimated: {{ estimatedFoodCalories }} calories
                                 </div>
                             </div>
-                            <div class="flex space-x-2">
-                                <PrimaryButton type="submit" :disabled="foodForm.processing">
-                                    Log Food
-                                </PrimaryButton>
-                                <SecondaryButton @click="showFoodForm = false">
-                                    Cancel
-                                </SecondaryButton>
+                            <div class="flex justify-between items-center">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    Form will stay open for multiple entries
+                                </div>
+                                <div class="flex space-x-2">
+                                    <PrimaryButton type="submit" :disabled="foodForm.processing">
+                                        Add Food
+                                    </PrimaryButton>
+                                    <SecondaryButton @click="showFoodForm = false">
+                                        Done
+                                    </SecondaryButton>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -1040,11 +1044,6 @@ function getPhaseColor(phase: string) {
                                 />
                                 <InputError :message="workoutForm.errors.notes" />
                             </div>
-                            <div v-if="selectedWorkoutType" class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                <div class="text-sm text-red-700 dark:text-red-300">
-                                    Estimated: {{ estimatedCaloriesBurned }} calories burned
-                                </div>
-                            </div>
                             <div class="flex space-x-2">
                                 <PrimaryButton type="submit" :disabled="workoutForm.processing">
                                     Log Workout
@@ -1065,7 +1064,7 @@ function getPhaseColor(phase: string) {
                                         {{ workout.workout_type.name }}
                                     </div>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ workout.duration_minutes }}min • {{ workout.intensity }} intensity • {{ Math.round(workout.calories_burned) }} cal burned
+                                        {{ workout.duration_minutes }}min • {{ workout.intensity }} intensity
                                     </div>
                                     <div v-if="workout.notes" class="text-xs text-gray-500 dark:text-gray-400 italic">
                                         {{ workout.notes }}

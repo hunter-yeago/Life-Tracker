@@ -339,22 +339,21 @@ const filteredOneTimeFoodTypes = computed(() => {
                         <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                             These are specific meal items that were logged once and are not available for reuse in new food entries.
                         </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="space-y-1 max-h-48 overflow-y-auto">
                             <div
                                 v-for="foodType in filteredOneTimeFoodTypes"
                                 :key="foodType.id"
-                                class="cursor-pointer rounded-lg border p-4 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
-                                :class="{ 'border-blue-500 bg-blue-50 dark:bg-blue-900': selectedFoodType?.id === foodType.id }"
+                                class="cursor-pointer rounded p-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                                :class="{ 'bg-blue-50 dark:bg-blue-900': selectedFoodType?.id === foodType.id }"
                                 @click="viewFoodType(foodType)"
                             >
-                                <div class="font-medium text-gray-900 dark:text-white mb-1">
-                                    {{ foodType.name }}
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium text-gray-900 dark:text-white text-sm truncate">
+                                        {{ foodType.name }}
+                                    </div>
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                    {{ Math.round(foodType.calories_per_serving || 0) }} cal/{{ foodType.serving_size || 'serving' }}
-                                </div>
-                                <div class="text-xs text-gray-400 dark:text-gray-500">
-                                    {{ foodType.category || 'No category' }}
+                                <div class="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
+                                    {{ Math.round(foodType.calories_per_serving || 0) }} cal
                                 </div>
                             </div>
                         </div>
