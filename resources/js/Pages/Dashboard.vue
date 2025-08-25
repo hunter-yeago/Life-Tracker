@@ -265,7 +265,47 @@ function createCalorieChart() {
         .style('z-index', '1000')
         .style('pointer-events', 'none');
 
-    // Add dots with hover functionality
+    // Add exclusion bars for food data first (so dots render on top)
+    const parseExclusionDate = d3.timeParse('%Y-%m-%d');
+    Object.entries(props.nutritionStats.excludedFoodData).forEach(([dateStr, note]) => {
+        const exclusionDate = parseExclusionDate(dateStr);
+        if (exclusionDate && x.domain()[0] <= exclusionDate && exclusionDate <= x.domain()[1]) {
+            svg.append('rect')
+                .attr('class', 'exclusion-bar')
+                .attr('x', x(exclusionDate) - 2.5) // Center the 5px bar
+                .attr('y', 0)
+                .attr('width', 5)
+                .attr('height', height)
+                .attr('fill', 'rgba(239, 68, 68, 0.6)') // Semi-transparent red
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event) {
+                    const formatTooltipDate = d3.timeFormat('%B %d, %Y');
+                    const tooltipContent = `
+                        <div style="color: ${textColor};">
+                            <div style="font-weight: 600; margin-bottom: 6px; color: #DC2626;">Excluded: ${formatTooltipDate(exclusionDate)}</div>
+                            <div style="margin-bottom: 4px;">Food data excluded from calculations</div>
+                            ${note ? `<div style="border-top: 1px solid ${isDarkMode ? '#4B5563' : '#E5E7EB'}; padding-top: 6px; margin-top: 6px; font-style: italic;">${note}</div>` : ''}
+                        </div>
+                    `;
+                    
+                    tooltip.transition().duration(200).style('opacity', 1);
+                    tooltip.html(tooltipContent)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mousemove', function(event) {
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition().duration(200).style('opacity', 0);
+                });
+        }
+    });
+
+    console.log('Added exclusion bars for', Object.keys(props.nutritionStats.excludedFoodData).length, 'excluded dates');
+
+    // Add dots with hover functionality (after exclusion bars so they render on top)
     svg.selectAll('.dot')
         .data(processedData)
         .enter().append('circle')
@@ -313,44 +353,6 @@ function createCalorieChart() {
         });
 
     console.log('Added hover events to', processedData.length, 'calorie data points');
-
-    // Add exclusion bars for food data
-    const parseExclusionDate = d3.timeParse('%Y-%m-%d');
-    Object.entries(props.nutritionStats.excludedFoodData).forEach(([dateStr, note]) => {
-        const exclusionDate = parseExclusionDate(dateStr);
-        if (exclusionDate && x.domain()[0] <= exclusionDate && exclusionDate <= x.domain()[1]) {
-            svg.append('rect')
-                .attr('class', 'exclusion-bar')
-                .attr('x', x(exclusionDate) - 2.5) // Center the 5px bar
-                .attr('y', 0)
-                .attr('width', 5)
-                .attr('height', height)
-                .attr('fill', 'rgba(239, 68, 68, 0.6)') // Semi-transparent red
-                .style('cursor', 'pointer')
-                .on('mouseover', function(event) {
-                    const formatTooltipDate = d3.timeFormat('%B %d, %Y');
-                    const tooltipContent = `
-                        <div style="color: ${textColor};">
-                            <div style="font-weight: 600; margin-bottom: 6px; color: #DC2626;">Excluded: ${formatTooltipDate(exclusionDate)}</div>
-                            <div style="margin-bottom: 4px;">Food data excluded from calculations</div>
-                            ${note ? `<div style="border-top: 1px solid ${isDarkMode ? '#4B5563' : '#E5E7EB'}; padding-top: 6px; margin-top: 6px; font-style: italic;">${note}</div>` : ''}
-                        </div>
-                    `;
-                    
-                    tooltip.transition().duration(200).style('opacity', 1);
-                    tooltip.html(tooltipContent)
-                        .style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 10) + 'px');
-                })
-                .on('mousemove', function(event) {
-                    tooltip.style('left', (event.pageX + 10) + 'px')
-                        .style('top', (event.pageY - 10) + 'px');
-                })
-                .on('mouseout', function() {
-                    tooltip.transition().duration(200).style('opacity', 0);
-                });
-        }
-    });
 
     // Add axes with improved styling
     svg.append('g')
