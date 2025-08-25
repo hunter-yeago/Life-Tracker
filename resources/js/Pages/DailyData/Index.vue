@@ -87,6 +87,12 @@ interface DailyDataExclusion {
     date: string;
 }
 
+interface DailyNote {
+    id?: number;
+    note?: string;
+    date: string;
+}
+
 interface Props {
     selectedDate: string;
     formattedDate: string;
@@ -98,6 +104,7 @@ interface Props {
     workoutTypes: WorkoutType[];
     dailyWeight?: DailyWeight;
     dailyExclusions?: DailyDataExclusion;
+    dailyNote?: DailyNote;
 }
 
 const props = defineProps<Props>();
@@ -131,6 +138,11 @@ const weightForm = useForm({
     date: props.selectedDate,
 });
 
+const dailyNoteForm = useForm({
+    note: props.dailyNote?.note || '',
+    date: props.selectedDate,
+});
+
 // Update the form when the daily weight changes (e.g., when navigating dates)
 watch(() => props.dailyWeight, (newWeight) => {
     weightForm.weight = newWeight?.weight?.toString() || '';
@@ -138,9 +150,16 @@ watch(() => props.dailyWeight, (newWeight) => {
     weightForm.date = props.selectedDate;
 }, { deep: true });
 
+// Update the form when the daily note changes (e.g., when navigating dates)
+watch(() => props.dailyNote, (newNote) => {
+    dailyNoteForm.note = newNote?.note || '';
+    dailyNoteForm.date = props.selectedDate;
+}, { deep: true });
+
 // Also update when the selected date changes
 watch(() => props.selectedDate, (newDate) => {
     weightForm.date = newDate;
+    dailyNoteForm.date = newDate;
 });
 
 const dateInput = ref<HTMLInputElement>();
@@ -263,6 +282,15 @@ function submitWeight() {
         onSuccess: () => {
             showWeightForm.value = false;
         }
+    });
+}
+
+function submitDailyNote() {
+    dailyNoteForm.post(route('daily-data.note'), {
+        onSuccess: () => {
+            // Note saved successfully
+        },
+        preserveScroll: true
     });
 }
 
@@ -461,6 +489,28 @@ function getPhaseColor(phase: string) {
                     </button>
                 </div>
 
+                <!-- Daily Note -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Daily Note</h4>
+                    </div>
+                    <form @submit.prevent="submitDailyNote" class="space-y-4">
+                        <div>
+                            <textarea
+                                v-model="dailyNoteForm.note"
+                                placeholder="Add a note for today..."
+                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                                rows="3"
+                            ></textarea>
+                            <InputError class="mt-2" :message="dailyNoteForm.errors.note" />
+                        </div>
+                        <div class="flex justify-end">
+                            <PrimaryButton type="submit" :disabled="dailyNoteForm.processing">
+                                Save Note
+                            </PrimaryButton>
+                        </div>
+                    </form>
+                </div>
 
                 <!-- Quick Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4">

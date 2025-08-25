@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DailyDataExclusion;
+use App\Models\DailyNote;
 use App\Models\DailyWeight;
 use App\Models\DietPeriod;
 use App\Models\Food;
@@ -64,6 +65,9 @@ class DailyDataController extends Controller
         // Get daily data exclusions for this date
         $dailyExclusions = DailyDataExclusion::getForUserAndDate(auth()->id(), $date);
 
+        // Get daily note for this date
+        $dailyNote = DailyNote::getForUserAndDate(auth()->id(), $date);
+
         return Inertia::render('DailyData/Index', [
             'selectedDate' => $selectedDate,
             'formattedDate' => $date->format('l, F j, Y'),
@@ -75,6 +79,7 @@ class DailyDataController extends Controller
             'workoutTypes' => $workoutTypes,
             'dailyWeight' => $dailyWeight,
             'dailyExclusions' => $dailyExclusions,
+            'dailyNote' => $dailyNote,
         ]);
     }
 
@@ -227,5 +232,23 @@ class DailyDataController extends Controller
         $dataTypeName = ucfirst($validated['data_type']);
 
         return back()->with('success', "{$dataTypeName} data for {$date->format('M j')} {$status} dataset");
+    }
+
+    public function storeDailyNote(Request $request)
+    {
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:2000',
+            'date' => 'required|date',
+        ]);
+
+        $date = Carbon::parse($validated['date']);
+
+        DailyNote::upsertForUserAndDate(
+            auth()->id(),
+            $date,
+            $validated['note']
+        );
+
+        return back()->with('success', 'Daily note saved successfully');
     }
 }

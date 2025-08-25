@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/daily-data/food', [DailyDataController::class, 'storeFood'])->name('daily-data.food');
     Route::post('/daily-data/workout', [DailyDataController::class, 'storeWorkout'])->name('daily-data.workout');
     Route::post('/daily-data/weight', [DailyDataController::class, 'storeWeight'])->name('daily-data.weight');
+    Route::post('/daily-data/note', [DailyDataController::class, 'storeDailyNote'])->name('daily-data.note');
     Route::delete('/daily-data/reset', [DailyDataController::class, 'resetDay'])->name('daily-data.reset');
 
     // Toggle day exclusion from dataset
