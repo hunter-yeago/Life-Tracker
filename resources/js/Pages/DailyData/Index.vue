@@ -490,25 +490,20 @@ function getPhaseColor(phase: string) {
                 </div>
 
                 <!-- Daily Note -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Daily Note</h4>
-                    </div>
-                    <form @submit.prevent="submitDailyNote" class="space-y-4">
-                        <div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3">
+                    <form @submit.prevent="submitDailyNote" class="flex items-start gap-3">
+                        <div class="flex-1">
                             <textarea
                                 v-model="dailyNoteForm.note"
-                                placeholder="Add a note for today..."
-                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
-                                rows="3"
+                                placeholder="Daily note..."
+                                class="w-full text-sm rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                                rows="2"
                             ></textarea>
-                            <InputError class="mt-2" :message="dailyNoteForm.errors.note" />
+                            <InputError class="mt-1" :message="dailyNoteForm.errors.note" />
                         </div>
-                        <div class="flex justify-end">
-                            <PrimaryButton type="submit" :disabled="dailyNoteForm.processing">
-                                Save Note
-                            </PrimaryButton>
-                        </div>
+                        <PrimaryButton type="submit" :disabled="dailyNoteForm.processing" class="text-sm px-3 py-2">
+                            Save
+                        </PrimaryButton>
                     </form>
                 </div>
 
