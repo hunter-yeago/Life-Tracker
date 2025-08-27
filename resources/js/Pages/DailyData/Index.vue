@@ -117,11 +117,22 @@ const editForm = ref({
     servings: '',
     notes: ''
 });
+const showCreateFoodType = ref(false);
 
 const foodForm = useForm({
     food_type_id: '',
     servings: '1',
     notes: '',
+});
+
+const createFoodTypeForm = useForm({
+    name: '',
+    calories_per_serving: '',
+    protein_per_serving: '',
+    carbs_per_serving: '',
+    fat_per_serving: '',
+    description: '',
+    is_one_time_item: false,
 });
 
 const workoutForm = useForm({
@@ -241,6 +252,11 @@ function handleDateKeydown(event: KeyboardEvent) {
 
 
 function submitFood() {
+    // Don't submit if we're in create mode
+    if (showCreateFoodType.value || foodForm.food_type_id === 'create-new') {
+        return;
+    }
+    
     // Set the date in the form data
     foodForm.transform((data) => ({
         ...data,
@@ -415,7 +431,7 @@ function getEditedNutrition(food: Food) {
 }
 
 const selectedFoodType = computed(() => {
-    if (!foodForm.food_type_id) return null;
+    if (!foodForm.food_type_id || foodForm.food_type_id === 'create-new') return null;
     return props.foodTypes.find(ft => ft.id == Number(foodForm.food_type_id));
 });
 
@@ -423,6 +439,37 @@ const estimatedFoodCalories = computed(() => {
     if (!selectedFoodType.value) return 0;
     return Math.round(selectedFoodType.value.calories_per_serving * Number(foodForm.servings));
 });
+
+function updateSelectedFoodType() {
+    if (foodForm.food_type_id === 'create-new') {
+        showCreateFoodType.value = true;
+    } else {
+        showCreateFoodType.value = false;
+    }
+}
+
+function submitCreateFoodType() {
+    createFoodTypeForm.post(route('food-types.store'), {
+        onSuccess: (page) => {
+            createFoodTypeForm.reset();
+            showCreateFoodType.value = false;
+            // Reload the page to get the updated food types
+            router.reload({
+                only: ['foodTypes'],
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Auto-select the newly created food type
+                    if (page.props && page.props.newlyCreatedFoodType) {
+                        foodForm.food_type_id = page.props.newlyCreatedFoodType.id.toString();
+                    }
+                }
+            });
+        },
+        onError: (errors) => {
+            console.error('Food type creation failed:', errors);
+        }
+    });
+}
 
 
 const selectedWorkoutType = computed(() => {
@@ -858,10 +905,12 @@ function getPhaseColor(phase: string) {
                                     <select
                                         id="food_type_id"
                                         v-model="foodForm.food_type_id"
+                                        @change="updateSelectedFoodType"
                                         class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                        required
+                                        :required="!showCreateFoodType"
                                     >
                                         <option value="">Select food type...</option>
+                                        <option value="create-new">➕ Create New Food</option>
                                         <optgroup v-for="category in [...new Set(foodTypes.map(ft => ft.category))]" :key="category" :label="category">
                                             <option v-for="foodType in foodTypes.filter(ft => ft.category === category)" :key="foodType.id" :value="foodType.id">
                                                 {{ foodType.name }}
@@ -910,6 +959,112 @@ function getPhaseColor(phase: string) {
                                         Done
                                     </SecondaryButton>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Create New Food Type Form -->
+                    <div v-if="showCreateFoodType" class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-700 rounded-lg">
+                        <div class="flex justify-between items-center mb-4">
+                            <h5 class="text-lg font-semibold text-green-800 dark:text-green-200">Create New Food Type</h5>
+                            <button
+                                @click="showCreateFoodType = false; foodForm.food_type_id = ''"
+                                class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="submitCreateFoodType" class="space-y-4">
+                            <div>
+                                <InputLabel for="name" value="Food Name *" />
+                                <TextInput
+                                    id="name"
+                                    type="text"
+                                    class="w-full"
+                                    v-model="createFoodTypeForm.name"
+                                    placeholder="e.g., Refried Beans"
+                                    required
+                                />
+                                <InputError class="mt-2" :message="createFoodTypeForm.errors.name" />
+                            </div>
+
+                            <div>
+                                <h6 class="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                                    Nutrition Facts Per Serving
+                                </h6>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <InputLabel for="calories_per_serving" value="Calories *" />
+                                        <TextInput
+                                            id="calories_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="w-full"
+                                            v-model="createFoodTypeForm.calories_per_serving"
+                                            placeholder="140"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.calories_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="protein_per_serving" value="Protein (g) *" />
+                                        <TextInput
+                                            id="protein_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="w-full"
+                                            v-model="createFoodTypeForm.protein_per_serving"
+                                            placeholder="8"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.protein_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="carbs_per_serving" value="Carbs (g) *" />
+                                        <TextInput
+                                            id="carbs_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="w-full"
+                                            v-model="createFoodTypeForm.carbs_per_serving"
+                                            placeholder="19"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.carbs_per_serving" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="fat_per_serving" value="Fat (g) *" />
+                                        <TextInput
+                                            id="fat_per_serving"
+                                            type="number"
+                                            step="0.1"
+                                            class="w-full"
+                                            v-model="createFoodTypeForm.fat_per_serving"
+                                            placeholder="4.5"
+                                            required
+                                        />
+                                        <InputError class="mt-2" :message="createFoodTypeForm.errors.fat_per_serving" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input
+                                    id="is_one_time_item"
+                                    type="checkbox"
+                                    v-model="createFoodTypeForm.is_one_time_item"
+                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                />
+                                <label for="is_one_time_item" class="ml-2 text-sm text-gray-900 dark:text-gray-300">
+                                    One-time item (won't appear in dropdown for future meals)
+                                </label>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <PrimaryButton :disabled="createFoodTypeForm.processing">
+                                    Create Food Type
+                                </PrimaryButton>
                             </div>
                         </form>
                     </div>
