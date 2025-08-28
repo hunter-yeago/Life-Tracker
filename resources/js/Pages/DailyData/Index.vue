@@ -450,17 +450,20 @@ function updateSelectedFoodType() {
 
 function submitCreateFoodType() {
     createFoodTypeForm.post(route('food-types.store'), {
-        onSuccess: (page) => {
+        onSuccess: () => {
+            const foodTypeName = createFoodTypeForm.name;
             createFoodTypeForm.reset();
             showCreateFoodType.value = false;
+            
             // Reload the page to get the updated food types
             router.reload({
                 only: ['foodTypes'],
                 preserveScroll: true,
-                onSuccess: () => {
-                    // Auto-select the newly created food type
-                    if (page.props && page.props.newlyCreatedFoodType) {
-                        foodForm.food_type_id = page.props.newlyCreatedFoodType.id.toString();
+                onSuccess: (page) => {
+                    // Auto-select the newly created food type by finding it in the updated list
+                    const newFoodType = page.props.foodTypes?.find((ft: any) => ft.name === foodTypeName);
+                    if (newFoodType) {
+                        foodForm.food_type_id = newFoodType.id.toString();
                     }
                 }
             });
