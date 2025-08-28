@@ -42,8 +42,8 @@ class DailyDataController extends Controller
         // Get workouts for this date
         $workouts = Workout::with('workoutType')
             ->where('user_id', auth()->id())
-            ->whereDate('workout_date', $selectedDate)
-            ->orderBy('workout_date')
+            ->whereDate('performed_at', $selectedDate)
+            ->orderBy('performed_at')
             ->get();
 
         // Get available food types for quick add
@@ -120,27 +120,44 @@ class DailyDataController extends Controller
     {
         $validated = $request->validate([
             'workout_type_id' => 'required|exists:workout_types,id',
-            'duration_minutes' => 'required|integer|min:1',
-            'intensity' => 'required|in:low,moderate,high',
+            'sets' => 'nullable|integer|min:0',
+            'reps' => 'nullable|integer|min:0',
+            'weight' => 'nullable|numeric|min:0',
+            'distance' => 'nullable|numeric|min:0',
+            'difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
+            'left_sets' => 'nullable|integer|min:0',
+            'left_reps' => 'nullable|integer|min:0',
+            'left_weight' => 'nullable|numeric|min:0',
+            'left_difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
+            'right_sets' => 'nullable|integer|min:0',
+            'right_reps' => 'nullable|integer|min:0',
+            'right_weight' => 'nullable|numeric|min:0',
+            'right_difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
             'notes' => 'nullable|string',
-            'workout_date' => 'required|date',
+            'date' => 'required|date',
         ]);
 
-        $workoutType = WorkoutType::findOrFail($validated['workout_type_id']);
-
-        // Calculate calories burned based on duration and intensity multiplier
-        $intensityMultipliers = ['low' => 0.8, 'moderate' => 1.0, 'high' => 1.2];
-        $multiplier = $intensityMultipliers[$validated['intensity']];
-        $caloriesBurned = ($validated['duration_minutes'] * $workoutType->calories_per_minute) * $multiplier;
+        // Use the selected date to set performed_at for proper date filtering
+        $performedAt = Carbon::parse($validated['date'])->setTime(12, 0, 0);
 
         Workout::create([
             'user_id' => auth()->id(),
             'workout_type_id' => $validated['workout_type_id'],
-            'duration_minutes' => $validated['duration_minutes'],
-            'calories_burned' => $caloriesBurned,
-            'workout_date' => $validated['workout_date'],
-            'intensity' => $validated['intensity'],
+            'sets' => $validated['sets'] ?: null,
+            'reps' => $validated['reps'] ?: null,
+            'weight' => $validated['weight'] ?: null,
+            'distance' => $validated['distance'] ?: null,
+            'difficulty' => $validated['difficulty'] ?: null,
+            'left_sets' => $validated['left_sets'] ?: null,
+            'left_reps' => $validated['left_reps'] ?: null,
+            'left_weight' => $validated['left_weight'] ?: null,
+            'left_difficulty' => $validated['left_difficulty'] ?: null,
+            'right_sets' => $validated['right_sets'] ?: null,
+            'right_reps' => $validated['right_reps'] ?: null,
+            'right_weight' => $validated['right_weight'] ?: null,
+            'right_difficulty' => $validated['right_difficulty'] ?: null,
             'notes' => $validated['notes'],
+            'performed_at' => $performedAt,
         ]);
 
         return back()->with('success', 'Workout logged successfully');
@@ -162,7 +179,7 @@ class DailyDataController extends Controller
 
         // Delete all workouts for this date
         Workout::where('user_id', $userId)
-            ->whereDate('workout_date', $date)
+            ->whereDate('performed_at', $date)
             ->delete();
 
         // Delete daily weight for this date

@@ -14,19 +14,37 @@ class Workout extends Model
     protected $fillable = [
         'user_id',
         'workout_type_id',
-        'duration_minutes',
-        'calories_burned',
-        'intensity',
+        'sets',
+        'reps',
+        'weight',
+        'distance',
+        'difficulty',
+        'left_sets',
+        'left_reps',
+        'left_weight',
+        'left_difficulty',
+        'right_sets',
+        'right_reps',
+        'right_weight',
+        'right_difficulty',
         'notes',
-        'workout_date',
+        'performed_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'duration_minutes' => 'integer',
-            'calories_burned' => 'decimal:2',
-            'workout_date' => 'date',
+            'sets' => 'integer',
+            'reps' => 'integer',
+            'weight' => 'decimal:2',
+            'distance' => 'decimal:2',
+            'left_sets' => 'integer',
+            'left_reps' => 'integer',
+            'left_weight' => 'decimal:2',
+            'right_sets' => 'integer',
+            'right_reps' => 'integer',
+            'right_weight' => 'decimal:2',
+            'performed_at' => 'datetime',
         ];
     }
 

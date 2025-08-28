@@ -124,9 +124,6 @@ watch(
 function createCalorieChart() {
     if (!calorieChart.value) return;
     
-    console.log('Creating calorie chart with data:', props.nutritionStats.caloriesByDay);
-    console.log('Excluded food data:', props.nutritionStats.excludedFoodData);
-    
     const margin = { top: 60, right: 30, bottom: 40, left: 60 };
     const containerWidth = Math.min(calorieChart.value.clientWidth, calorieChart.value.parentElement?.clientWidth || 800);
     const width = containerWidth - margin.left - margin.right;
@@ -154,8 +151,6 @@ function createCalorieChart() {
         calories: d.calories,
         notes: d.notes || []
     })).filter(d => d.date !== null);
-    
-    console.log('Processed calorie data for chart:', processedData);
 
     const x = d3.scaleTime()
         .domain(d3.extent(processedData, d => d.date) as [Date, Date])
@@ -280,7 +275,6 @@ function createCalorieChart() {
                 .attr('fill', 'rgba(239, 68, 68, 0.6)') // Semi-transparent red
                 .style('cursor', 'pointer')
                 .on('mouseover', function(event) {
-                    console.log('Exclusion bar mouseover triggered:', dateStr, note);
                     const formatTooltipDate = d3.timeFormat('%B %d, %Y');
                     const tooltipContent = `
                         <div style="color: ${textColor};">
@@ -300,16 +294,10 @@ function createCalorieChart() {
                         .style('top', (event.pageY - 10) + 'px');
                 })
                 .on('mouseout', function() {
-                    console.log('Exclusion bar mouseout triggered');
                     tooltip.transition().duration(200).style('opacity', 0);
-                })
-                .on('click', function(event) {
-                    console.log('Exclusion bar clicked:', dateStr);
                 });
         }
     });
-
-    console.log('Added exclusion bars for', Object.keys(props.nutritionStats.excludedFoodData).length, 'excluded dates');
 
     // Add dots with hover functionality (after exclusion bars so they render on top)
     const dots = svg.selectAll('.dot')
@@ -322,10 +310,7 @@ function createCalorieChart() {
         .attr('fill', '#10B981')
         .style('cursor', 'pointer');
     
-    console.log('Created', dots.size(), 'dot elements');
-    
     dots.on('mouseover', function(event, d) {
-            console.log('Dot mouseover triggered:', d);
             d3.select(this).attr('r', 6);
             
             const formatTooltipDate = d3.timeFormat('%B %d, %Y');
@@ -358,19 +343,9 @@ function createCalorieChart() {
                 .style('top', (event.pageY - 10) + 'px');
         })
         .on('mouseout', function() {
-            console.log('Dot mouseout triggered');
             d3.select(this).attr('r', 4);
             tooltip.transition().duration(200).style('opacity', 0);
         });
-
-    console.log('Added hover events to', processedData.length, 'calorie data points');
-    console.log('SVG container dimensions:', calorieChart.value.clientWidth, 'x', calorieChart.value.clientHeight);
-    console.log('All SVG elements in container:', d3.select(calorieChart.value).selectAll('*').size());
-    
-    // Test click events as well for debugging
-    dots.on('click', function(event, d) {
-        console.log('Dot clicked:', d);
-    });
 
     // Add axes with improved styling
     svg.append('g')

@@ -22,8 +22,9 @@ interface FoodType {
 interface WorkoutType {
     id: number;
     name: string;
-    category: string;
-    calories_per_minute: number;
+    muscle_group: string;
+    equipment_needed: string;
+    sides: 'both' | 'left_right';
 }
 
 interface Food {
@@ -40,11 +41,21 @@ interface Food {
 interface Workout {
     id: number;
     workout_type: WorkoutType;
-    duration_minutes: number;
-    calories_burned: number;
-    intensity: string;
-    workout_date: string;
+    sets?: number;
+    reps?: number;
+    weight?: number;
+    distance?: number;
+    difficulty?: string;
+    left_sets?: number;
+    left_reps?: number;
+    left_weight?: number;
+    left_difficulty?: string;
+    right_sets?: number;
+    right_reps?: number;
+    right_weight?: number;
+    right_difficulty?: string;
     notes?: string;
+    performed_at: string;
 }
 
 interface DietPeriod {
@@ -137,10 +148,20 @@ const createFoodTypeForm = useForm({
 
 const workoutForm = useForm({
     workout_type_id: '',
-    duration_minutes: '30',
-    intensity: 'moderate',
+    sets: '',
+    reps: '',
+    weight: '',
+    distance: '',
+    difficulty: '',
+    left_sets: '',
+    left_reps: '',
+    left_weight: '',
+    left_difficulty: '',
+    right_sets: '',
+    right_reps: '',
+    right_weight: '',
+    right_difficulty: '',
     notes: '',
-    workout_date: props.selectedDate + 'T12:00',
 });
 
 const weightForm = useForm({
@@ -282,13 +303,16 @@ function submitFood() {
 }
 
 function submitWorkout() {
+    // Set the date in the form data
+    workoutForm.transform((data) => ({
+        ...data,
+        date: props.selectedDate
+    }));
+    
     workoutForm.post(route('daily-data.workout'), {
         onSuccess: () => {
             showWorkoutForm.value = false;
-            workoutForm.reset('workout_type_id', 'duration_minutes', 'notes');
-            workoutForm.duration_minutes = '30';
-            workoutForm.intensity = 'moderate';
-            workoutForm.workout_date = props.selectedDate + 'T12:00';
+            workoutForm.reset('workout_type_id', 'sets', 'reps', 'weight', 'distance', 'difficulty', 'left_sets', 'left_reps', 'left_weight', 'left_difficulty', 'right_sets', 'right_reps', 'right_weight', 'right_difficulty', 'notes');
         }
     });
 }
@@ -478,6 +502,18 @@ function submitCreateFoodType() {
 const selectedWorkoutType = computed(() => {
     if (!workoutForm.workout_type_id) return null;
     return props.workoutTypes.find(wt => wt.id == Number(workoutForm.workout_type_id));
+});
+
+const isCardioWorkout = computed(() => {
+    return selectedWorkoutType.value?.muscle_group === 'Cardio';
+});
+
+const isLeftRightWorkout = computed(() => {
+    return selectedWorkoutType.value?.sides === 'left_right';
+});
+
+const isBothSidesWorkout = computed(() => {
+    return selectedWorkoutType.value?.sides === 'both';
 });
 
 
@@ -1183,60 +1219,220 @@ function getPhaseColor(phase: string) {
                     <!-- Workout Form -->
                     <div v-if="showWorkoutForm" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <form @submit.prevent="submitWorkout" class="space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <InputLabel for="workout_type_id" value="Workout Type" />
+                                <select
+                                    id="workout_type_id"
+                                    v-model="workoutForm.workout_type_id"
+                                    class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                    required
+                                >
+                                    <option value="">Select workout type...</option>
+                                    <optgroup v-for="muscleGroup in [...new Set(workoutTypes.map(wt => wt.muscle_group))]" :key="muscleGroup" :label="muscleGroup">
+                                        <option v-for="workoutType in workoutTypes.filter(wt => wt.muscle_group === muscleGroup)" :key="workoutType.id" :value="workoutType.id">
+                                            {{ workoutType.name }}
+                                        </option>
+                                    </optgroup>
+                                </select>
+                                <InputError :message="workoutForm.errors.workout_type_id" />
+                            </div>
+                            <!-- Cardio Fields -->
+                            <div v-if="isCardioWorkout">
                                 <div>
-                                    <InputLabel for="workout_type_id" value="Workout Type" />
-                                    <select
-                                        id="workout_type_id"
-                                        v-model="workoutForm.workout_type_id"
-                                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                        required
-                                    >
-                                        <option value="">Select workout type...</option>
-                                        <optgroup v-for="category in [...new Set(workoutTypes.map(wt => wt.category))]" :key="category" :label="category">
-                                            <option v-for="workoutType in workoutTypes.filter(wt => wt.category === category)" :key="workoutType.id" :value="workoutType.id">
-                                                {{ workoutType.name }}
-                                            </option>
-                                        </optgroup>
-                                    </select>
-                                    <InputError :message="workoutForm.errors.workout_type_id" />
-                                </div>
-                                <div>
-                                    <InputLabel for="duration_minutes" value="Duration (minutes)" />
+                                    <InputLabel for="distance" value="Distance (miles)" />
                                     <TextInput
-                                        id="duration_minutes"
+                                        id="distance"
                                         type="number"
-                                        min="1"
-                                        v-model="workoutForm.duration_minutes"
+                                        step="0.1"
+                                        min="0"
+                                        v-model="workoutForm.distance"
                                         class="w-full"
-                                        required
+                                        placeholder="e.g., 3.1"
                                     />
-                                    <InputError :message="workoutForm.errors.duration_minutes" />
-                                </div>
-                                <div>
-                                    <InputLabel for="intensity" value="Intensity" />
-                                    <select
-                                        id="intensity"
-                                        v-model="workoutForm.intensity"
-                                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                    >
-                                        <option value="low">Low</option>
-                                        <option value="moderate">Moderate</option>
-                                        <option value="high">High</option>
-                                    </select>
-                                    <InputError :message="workoutForm.errors.intensity" />
+                                    <InputError :message="workoutForm.errors.distance" />
                                 </div>
                             </div>
-                            <div>
-                                <InputLabel for="workout_date" value="Workout Time" />
-                                <TextInput
-                                    id="workout_date"
-                                    type="datetime-local"
-                                    v-model="workoutForm.workout_date"
-                                    class="w-full"
-                                    required
-                                />
-                                <InputError :message="workoutForm.errors.workout_date" />
+                            
+                            <!-- Both Sides Strength Training Fields -->
+                            <div v-if="!isCardioWorkout && isBothSidesWorkout" class="space-y-4">
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <InputLabel for="sets" value="Sets" />
+                                        <TextInput
+                                            id="sets"
+                                            type="number"
+                                            min="0"
+                                            v-model="workoutForm.sets"
+                                            class="w-full"
+                                            placeholder="e.g., 3"
+                                        />
+                                        <InputError :message="workoutForm.errors.sets" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="reps" value="Reps" />
+                                        <TextInput
+                                            id="reps"
+                                            type="number"
+                                            min="0"
+                                            v-model="workoutForm.reps"
+                                            class="w-full"
+                                            placeholder="e.g., 10"
+                                        />
+                                        <InputError :message="workoutForm.errors.reps" />
+                                    </div>
+                                    <div>
+                                        <InputLabel for="workout_weight" value="Weight (lbs)" />
+                                        <TextInput
+                                            id="workout_weight"
+                                            type="number"
+                                            step="0.5"
+                                            min="0"
+                                            v-model="workoutForm.weight"
+                                            class="w-full"
+                                            placeholder="e.g., 135"
+                                        />
+                                        <InputError :message="workoutForm.errors.weight" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <InputLabel for="difficulty" value="Difficulty" />
+                                    <select
+                                        id="difficulty"
+                                        v-model="workoutForm.difficulty"
+                                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                    >
+                                        <option value="">Select difficulty...</option>
+                                        <option value="easy">Easy</option>
+                                        <option value="hard">Hard</option>
+                                        <option value="really_hard">Really Hard</option>
+                                        <option value="almost_fail">Almost Fail</option>
+                                        <option value="fail">Fail</option>
+                                    </select>
+                                    <InputError :message="workoutForm.errors.difficulty" />
+                                </div>
+                            </div>
+                            
+                            <!-- Left/Right Sides Strength Training Fields -->
+                            <div v-if="!isCardioWorkout && isLeftRightWorkout" class="space-y-4">
+                                <!-- Left Side -->
+                                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Left Side</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <InputLabel for="left_sets" value="Sets" />
+                                            <TextInput
+                                                id="left_sets"
+                                                type="number"
+                                                min="0"
+                                                v-model="workoutForm.left_sets"
+                                                class="w-full"
+                                                placeholder="e.g., 3"
+                                            />
+                                            <InputError :message="workoutForm.errors.left_sets" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="left_reps" value="Reps" />
+                                            <TextInput
+                                                id="left_reps"
+                                                type="number"
+                                                min="0"
+                                                v-model="workoutForm.left_reps"
+                                                class="w-full"
+                                                placeholder="e.g., 10"
+                                            />
+                                            <InputError :message="workoutForm.errors.left_reps" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="left_weight" value="Weight (lbs)" />
+                                            <TextInput
+                                                id="left_weight"
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                v-model="workoutForm.left_weight"
+                                                class="w-full"
+                                                placeholder="e.g., 25"
+                                            />
+                                            <InputError :message="workoutForm.errors.left_weight" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="left_difficulty" value="Difficulty" />
+                                            <select
+                                                id="left_difficulty"
+                                                v-model="workoutForm.left_difficulty"
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                            >
+                                                <option value="">Select difficulty...</option>
+                                                <option value="easy">Easy</option>
+                                                <option value="hard">Hard</option>
+                                                <option value="really_hard">Really Hard</option>
+                                                <option value="almost_fail">Almost Fail</option>
+                                                <option value="fail">Fail</option>
+                                            </select>
+                                            <InputError :message="workoutForm.errors.left_difficulty" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Right Side -->
+                                <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                                    <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Right Side</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <InputLabel for="right_sets" value="Sets" />
+                                            <TextInput
+                                                id="right_sets"
+                                                type="number"
+                                                min="0"
+                                                v-model="workoutForm.right_sets"
+                                                class="w-full"
+                                                placeholder="e.g., 3"
+                                            />
+                                            <InputError :message="workoutForm.errors.right_sets" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="right_reps" value="Reps" />
+                                            <TextInput
+                                                id="right_reps"
+                                                type="number"
+                                                min="0"
+                                                v-model="workoutForm.right_reps"
+                                                class="w-full"
+                                                placeholder="e.g., 10"
+                                            />
+                                            <InputError :message="workoutForm.errors.right_reps" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="right_weight" value="Weight (lbs)" />
+                                            <TextInput
+                                                id="right_weight"
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                v-model="workoutForm.right_weight"
+                                                class="w-full"
+                                                placeholder="e.g., 25"
+                                            />
+                                            <InputError :message="workoutForm.errors.right_weight" />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="right_difficulty" value="Difficulty" />
+                                            <select
+                                                id="right_difficulty"
+                                                v-model="workoutForm.right_difficulty"
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                            >
+                                                <option value="">Select difficulty...</option>
+                                                <option value="easy">Easy</option>
+                                                <option value="hard">Hard</option>
+                                                <option value="really_hard">Really Hard</option>
+                                                <option value="almost_fail">Almost Fail</option>
+                                                <option value="fail">Fail</option>
+                                            </select>
+                                            <InputError :message="workoutForm.errors.right_difficulty" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <InputLabel for="workout_notes" value="Notes" />
@@ -1266,15 +1462,58 @@ function getPhaseColor(phase: string) {
                                     <div class="font-medium text-gray-900 dark:text-white">
                                         {{ workout.workout_type.name }}
                                     </div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ workout.duration_minutes }}min • {{ workout.intensity }} intensity
+                                    <div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                                        <!-- Cardio Display -->
+                                        <div v-if="workout.workout_type.muscle_group === 'Cardio'">
+                                            <span v-if="workout.distance">{{ workout.distance }} mi</span>
+                                        </div>
+                                        
+                                        <!-- Both Sides Strength Training Display -->
+                                        <div v-else-if="workout.workout_type.sides === 'both'" class="space-y-1">
+                                            <div v-if="workout.sets || workout.reps" class="flex gap-4">
+                                                <span v-if="workout.sets">{{ workout.sets }} sets</span>
+                                                <span v-if="workout.reps">{{ workout.reps }} reps</span>
+                                            </div>
+                                            <div v-if="workout.weight">
+                                                {{ workout.weight }} lbs
+                                            </div>
+                                            <div v-if="workout.difficulty">
+                                                Difficulty: {{ workout.difficulty.replace('_', ' ') }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Left/Right Sides Strength Training Display -->
+                                        <div v-else-if="workout.workout_type.sides === 'left_right'" class="space-y-2">
+                                            <!-- Left Side -->
+                                            <div v-if="workout.left_sets || workout.left_reps || workout.left_weight || workout.left_difficulty" class="bg-gray-100 dark:bg-gray-600 rounded p-2">
+                                                <div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">Left Side</div>
+                                                <div class="space-y-1">
+                                                    <div v-if="workout.left_sets || workout.left_reps" class="flex gap-2 text-xs">
+                                                        <span v-if="workout.left_sets">{{ workout.left_sets }} sets</span>
+                                                        <span v-if="workout.left_reps">{{ workout.left_reps }} reps</span>
+                                                    </div>
+                                                    <div v-if="workout.left_weight" class="text-xs">{{ workout.left_weight }} lbs</div>
+                                                    <div v-if="workout.left_difficulty" class="text-xs">{{ workout.left_difficulty.replace('_', ' ') }}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Right Side -->
+                                            <div v-if="workout.right_sets || workout.right_reps || workout.right_weight || workout.right_difficulty" class="bg-gray-100 dark:bg-gray-600 rounded p-2">
+                                                <div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">Right Side</div>
+                                                <div class="space-y-1">
+                                                    <div v-if="workout.right_sets || workout.right_reps" class="flex gap-2 text-xs">
+                                                        <span v-if="workout.right_sets">{{ workout.right_sets }} sets</span>
+                                                        <span v-if="workout.right_reps">{{ workout.right_reps }} reps</span>
+                                                    </div>
+                                                    <div v-if="workout.right_weight" class="text-xs">{{ workout.right_weight }} lbs</div>
+                                                    <div v-if="workout.right_difficulty" class="text-xs">{{ workout.right_difficulty.replace('_', ' ') }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div v-if="workout.notes" class="text-xs text-gray-500 dark:text-gray-400 italic">
+                                    <div v-if="workout.notes" class="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
                                         {{ workout.notes }}
                                     </div>
-                                </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ new Date(workout.workout_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                 </div>
                             </div>
                         </div>

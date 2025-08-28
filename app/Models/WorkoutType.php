@@ -16,6 +16,7 @@ class WorkoutType extends Model
         'description',
         'muscle_group',
         'equipment_needed',
+        'sides',
     ];
 
     public function workouts(): HasMany
