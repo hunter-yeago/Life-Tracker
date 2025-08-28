@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, ref, computed, watch, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
 import * as d3 from 'd3';
 
@@ -22,6 +23,7 @@ interface Props {
         totalCarbs: number;
         totalFat: number;
         caloriesByDay: Array<{ date: string; calories: number; notes: string[] }>;
+        macrosByDay: Array<{ date: string; protein: number; carbs: number; fat: number }>;
         averageDailyCalories: number;
         excludedFoodData: Record<string, string | null>;
     };
@@ -42,6 +44,15 @@ const props = defineProps<Props>();
 
 const calorieChart = ref<HTMLDivElement>();
 const weightChart = ref<HTMLDivElement>();
+const proteinChart = ref<HTMLDivElement>();
+const carbsChart = ref<HTMLDivElement>();
+const fatChart = ref<HTMLDivElement>();
+
+const showMacroCharts = ref({
+    protein: false,
+    carbs: false,
+    fat: false
+});
 
 const monthOptions = computed(() => {
     const months = [];
@@ -622,6 +633,186 @@ function createWeightChart() {
         .style('font-weight', '500')
         .text('Weight (lbs)');
 }
+
+function toggleMacroChart(macro: 'protein' | 'carbs' | 'fat') {
+    showMacroCharts.value[macro] = !showMacroCharts.value[macro];
+    if (showMacroCharts.value[macro]) {
+        // Use nextTick to ensure DOM is updated
+        nextTick(() => {
+            createMacroChart(macro);
+        });
+    }
+}
+
+function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
+    const chartRef = macro === 'protein' ? proteinChart : macro === 'carbs' ? carbsChart : fatChart;
+    if (!chartRef.value || props.nutritionStats.macrosByDay.length === 0) return;
+    
+    const margin = { top: 60, right: 30, bottom: 40, left: 60 };
+    const containerWidth = Math.min(chartRef.value.clientWidth, chartRef.value.parentElement?.clientWidth || 800);
+    const width = containerWidth - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    // Clear previous chart and tooltips
+    d3.select(chartRef.value).selectAll('*').remove();
+
+    const svg = d3.select(chartRef.value)
+        .append('svg')
+        .attr('width', '100%')
+        .attr('height', height + margin.top + margin.bottom)
+        .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+        .append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const data = props.nutritionStats.macrosByDay;
+    
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const formatDate = d3.timeFormat('%m/%d');
+    
+    const processedData = data.map(d => ({
+        date: parseDate(d.date)!,
+        value: d[macro]
+    })).filter(d => d.date !== null);
+
+    const x = d3.scaleTime()
+        .domain(d3.extent(processedData, d => d.date) as [Date, Date])
+        .range([0, width]);
+
+    const maxValue = d3.max(processedData, d => d.value) || 0;
+    const minValue = d3.min(processedData, d => d.value) || 0;
+    
+    // Add 10% buffer to top and bottom
+    const buffer = (maxValue - minValue) * 0.1;
+    const yMin = Math.max(0, Math.round(minValue - buffer));
+    const yMax = Math.round(maxValue + buffer);
+    
+    const y = d3.scaleLinear()
+        .domain([yMin, yMax])
+        .range([height, 0]);
+
+    // Determine colors and labels
+    const colors = {
+        protein: '#3b82f6', // Blue
+        carbs: '#10b981',   // Green
+        fat: '#f59e0b'      // Yellow
+    };
+    
+    const labels = {
+        protein: 'Protein (g)',
+        carbs: 'Carbs (g)', 
+        fat: 'Fat (g)'
+    };
+
+    // Determine if we're in dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#F3F4F6' : '#374151';
+    const gridColor = isDarkMode ? '#6B7280' : '#E5E7EB';
+    const axisColor = isDarkMode ? '#9CA3AF' : '#9CA3AF';
+
+    // Create line generator
+    const line = d3.line<any>()
+        .x(d => x(d.date))
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX);
+
+    // Add the line
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', 'none')
+        .attr('stroke', colors[macro])
+        .attr('stroke-width', 2)
+        .attr('d', line);
+
+    // Create tooltip div
+    const tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'tooltip')
+        .style('opacity', 0)
+        .style('position', 'absolute')
+        .style('background', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
+        .style('border', `1px solid ${isDarkMode ? '#4B5563' : '#E5E7EB'}`)
+        .style('border-radius', '8px')
+        .style('padding', '12px')
+        .style('font-size', '14px')
+        .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)')
+        .style('backdrop-filter', 'blur(8px)')
+        .style('z-index', '1000')
+        .style('pointer-events', 'none');
+
+    // Add dots with hover functionality
+    const dots = svg.selectAll('.dot')
+        .data(processedData)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.date!))
+        .attr('cy', d => y(d.value))
+        .attr('r', 4)
+        .attr('fill', colors[macro])
+        .style('cursor', 'pointer');
+    
+    dots.on('mouseover', function(event, d) {
+            d3.select(this).attr('r', 6);
+            
+            const formatTooltipDate = d3.timeFormat('%B %d, %Y');
+            const tooltipContent = `
+                <div style="color: ${textColor};">
+                    <div style="font-weight: 600; margin-bottom: 6px;">${formatTooltipDate(d.date)}</div>
+                    <div style="margin-bottom: 4px;">${labels[macro]}: <span style="font-weight: 500;">${Math.round(d.value * 10) / 10}</span></div>
+                </div>
+            `;
+            
+            tooltip.transition().duration(200).style('opacity', 1);
+            tooltip.html(tooltipContent)
+                .style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 10) + 'px');
+        })
+        .on('mousemove', function(event) {
+            tooltip.style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 10) + 'px');
+        })
+        .on('mouseout', function() {
+            d3.select(this).attr('r', 4);
+            tooltip.transition().duration(200).style('opacity', 0);
+        });
+
+    // Add axes with improved styling
+    svg.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(formatDate as any))
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
+
+    svg.append('g')
+        .call(d3.axisLeft(y))
+        .call(g => {
+            g.selectAll('text')
+                .style('fill', textColor)
+                .style('font-size', '12px');
+            g.selectAll('line')
+                .style('stroke', gridColor);
+            g.select('.domain')
+                .style('stroke', axisColor);
+        });
+
+    // Add Y-axis label
+    svg.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('y', 0 - margin.left)
+        .attr('x', 0 - (height / 2))
+        .attr('dy', '1em')
+        .style('text-anchor', 'middle')
+        .style('fill', textColor)
+        .style('font-size', '14px')
+        .style('font-weight', '500')
+        .text(labels[macro]);
+}
 </script>
 
 <template>
@@ -723,6 +914,48 @@ function createWeightChart() {
                         <div ref="weightChart" class="w-full overflow-hidden"></div>
                         <div v-if="weightStats.weightByDay.length === 0" class="text-center text-gray-500 py-8">
                             No weight data for this month
+                        </div>
+                    </div>
+
+                    <!-- Macro Charts -->
+                    <div v-if="nutritionStats.macrosByDay.length > 0" class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Macro Charts</h3>
+                            <div class="flex gap-2">
+                                <SecondaryButton 
+                                    @click="toggleMacroChart('protein')"
+                                    :class="{ 'bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300': showMacroCharts.protein }"
+                                >
+                                    Protein
+                                </SecondaryButton>
+                                <SecondaryButton 
+                                    @click="toggleMacroChart('carbs')"
+                                    :class="{ 'bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300': showMacroCharts.carbs }"
+                                >
+                                    Carbs
+                                </SecondaryButton>
+                                <SecondaryButton 
+                                    @click="toggleMacroChart('fat')"
+                                    :class="{ 'bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-300': showMacroCharts.fat }"
+                                >
+                                    Fat
+                                </SecondaryButton>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <div v-if="showMacroCharts.protein">
+                                <h4 class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">Protein by Day</h4>
+                                <div ref="proteinChart" class="w-full overflow-hidden"></div>
+                            </div>
+                            <div v-if="showMacroCharts.carbs">
+                                <h4 class="text-sm font-medium text-green-600 dark:text-green-400 mb-2">Carbs by Day</h4>
+                                <div ref="carbsChart" class="w-full overflow-hidden"></div>
+                            </div>
+                            <div v-if="showMacroCharts.fat">
+                                <h4 class="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">Fat by Day</h4>
+                                <div ref="fatChart" class="w-full overflow-hidden"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

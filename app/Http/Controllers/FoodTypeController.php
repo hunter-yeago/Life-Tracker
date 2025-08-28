@@ -144,4 +144,24 @@ class FoodTypeController extends Controller
 
         return response()->json($usageData);
     }
+
+    public function macroData(FoodType $foodType)
+    {
+        $macroData = $foodType->foods()
+            ->selectRaw('DATE(consumed_at) as date, SUM(total_protein) as protein, SUM(total_carbs) as carbs, SUM(total_fat) as fat')
+            ->where('consumed_at', '>=', now()->subDays(30))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => $item->date,
+                    'protein' => round($item->protein, 1),
+                    'carbs' => round($item->carbs, 1),
+                    'fat' => round($item->fat, 1)
+                ];
+            });
+
+        return response()->json($macroData);
+    }
 }

@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('workouts', WorkoutController::class);
     Route::resource('foods', FoodController::class);
     Route::get('api/food-types/{food_type}/usage', [FoodTypeController::class, 'usage'])->name('food-types.usage');
+    Route::get('api/food-types/{food_type}/macro-data', [FoodTypeController::class, 'macroData'])->name('food-types.macro-data');
     Route::resource('food-types', FoodTypeController::class)->except(['create']);
 });
 

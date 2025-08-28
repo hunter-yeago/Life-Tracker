@@ -94,6 +94,30 @@ class DashboardController extends Controller
             })
             ->values();
 
+        $macrosByDay = $user->foods()
+            ->select(
+                DB::raw('DATE(consumed_at) as date'),
+                DB::raw('SUM(total_protein) as protein'),
+                DB::raw('SUM(total_carbs) as carbs'),
+                DB::raw('SUM(total_fat) as fat')
+            )
+            ->whereBetween('consumed_at', [$startOfMonth, $endOfMonth])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->reject(function ($dayData) use ($excludedFoodDates) {
+                return in_array($dayData->date, $excludedFoodDates);
+            })
+            ->map(function ($dayData) {
+                return [
+                    'date' => $dayData->date,
+                    'protein' => round($dayData->protein, 1),
+                    'carbs' => round($dayData->carbs, 1),
+                    'fat' => round($dayData->fat, 1)
+                ];
+            })
+            ->values();
+
         // Calculate days with actual food data (excluding excluded days)
         $daysWithFoodData = $foods->groupBy(function ($food) {
             return Carbon::parse($food->consumed_at)->toDateString();
@@ -115,6 +139,7 @@ class DashboardController extends Controller
             'totalCarbs' => $includedFoods->sum('total_carbs'),
             'totalFat' => $includedFoods->sum('total_fat'),
             'caloriesByDay' => $caloriesByDay,
+            'macrosByDay' => $macrosByDay,
             'averageDailyCalories' => $averageCalories,
             'excludedFoodDates' => $excludedFoodDates,
             'excludedFoodData' => $excludedFoodData,

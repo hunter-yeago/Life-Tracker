@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
+import * as d3 from 'd3';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
@@ -39,9 +40,15 @@ const props = defineProps<Props>();
 const searchQuery = ref(props.search || '');
 const selectedFoodType = ref<FoodType | null>(null);
 const usageData = ref<Record<string, number[]>>({});
+const macroData = ref<Array<{date: string; protein: number; carbs: number; fat: number}>>([]);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 const showCreateModal = ref(false);
+const showCharts = ref({
+    protein: false,
+    carbs: false,
+    fat: false
+});
 
 const editForm = useForm({
     name: '',
@@ -73,14 +80,23 @@ function searchFoodTypes() {
 async function viewFoodType(foodType: FoodType) {
     selectedFoodType.value = foodType;
     usageData.value = {}; // Reset usage data
+    macroData.value = []; // Reset macro data
     
     try {
-        const response = await fetch(`/api/food-types/${foodType.id}/usage`);
-        const data = await response.json();
-        usageData.value = data;
+        const [usageResponse, macroResponse] = await Promise.all([
+            fetch(`/api/food-types/${foodType.id}/usage`),
+            fetch(`/api/food-types/${foodType.id}/macro-data`)
+        ]);
+        const [usage, macro] = await Promise.all([
+            usageResponse.json(),
+            macroResponse.json()
+        ]);
+        usageData.value = usage;
+        macroData.value = macro;
     } catch (error) {
-        console.error('Failed to fetch usage data:', error);
+        console.error('Failed to fetch data:', error);
         usageData.value = {};
+        macroData.value = [];
     }
 }
 
@@ -149,6 +165,75 @@ function closeModal() {
     selectedFoodType.value = null;
     editForm.reset();
     createForm.reset();
+}
+
+function toggleChart(macro: 'protein' | 'carbs' | 'fat') {
+    showCharts.value[macro] = !showCharts.value[macro];
+    if (showCharts.value[macro] && macroData.value.length > 0) {
+        nextTick(() => renderChart(macro));
+    }
+}
+
+function renderChart(macro: 'protein' | 'carbs' | 'fat') {
+    const container = d3.select(`#${macro}-chart`);
+    container.selectAll('*').remove(); // Clear previous chart
+    
+    if (macroData.value.length === 0) return;
+    
+    const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+    const width = 500 - margin.left - margin.right;
+    const height = 200 - margin.top - margin.bottom;
+    
+    const svg = container
+        .append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+    
+    const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+    
+    const parseDate = d3.timeParse('%Y-%m-%d');
+    const data = macroData.value.map(d => ({
+        date: parseDate(d.date)!,
+        value: d[macro]
+    }));
+    
+    const x = d3.scaleTime()
+        .domain(d3.extent(data, d => d.date) as [Date, Date])
+        .range([0, width]);
+    
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.value) || 0])
+        .nice()
+        .range([height, 0]);
+    
+    const line = d3.line<{date: Date; value: number}>()
+        .x(d => x(d.date))
+        .y(d => y(d.value))
+        .curve(d3.curveMonotoneX);
+    
+    g.append('g')
+        .attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(d3.timeFormat('%m/%d')));
+    
+    g.append('g')
+        .call(d3.axisLeft(y));
+    
+    g.append('path')
+        .datum(data)
+        .attr('fill', 'none')
+        .attr('stroke', macro === 'protein' ? '#3b82f6' : macro === 'carbs' ? '#10b981' : '#f59e0b')
+        .attr('stroke-width', 2)
+        .attr('d', line);
+    
+    g.selectAll('.dot')
+        .data(data)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.date))
+        .attr('cy', d => y(d.value))
+        .attr('r', 3)
+        .attr('fill', macro === 'protein' ? '#3b82f6' : macro === 'carbs' ? '#10b981' : '#f59e0b');
 }
 
 function formatMonth(month: string): string {
@@ -303,6 +388,47 @@ const filteredOneTimeFoodTypes = computed(() => {
                                                     {{ Math.round((selectedFoodType.fat_per_serving || 0) * 10) / 10 }}g
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chart Controls -->
+                                <div v-if="selectedFoodType && macroData.length > 0" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <h4 class="font-medium text-gray-900 dark:text-white mb-3">Macro Charts (Last 30 Days)</h4>
+                                    <div class="flex gap-2 mb-4">
+                                        <SecondaryButton 
+                                            @click="toggleChart('protein')"
+                                            :class="{ 'bg-blue-100 dark:bg-blue-800': showCharts.protein }"
+                                        >
+                                            Protein
+                                        </SecondaryButton>
+                                        <SecondaryButton 
+                                            @click="toggleChart('carbs')"
+                                            :class="{ 'bg-green-100 dark:bg-green-800': showCharts.carbs }"
+                                        >
+                                            Carbs
+                                        </SecondaryButton>
+                                        <SecondaryButton 
+                                            @click="toggleChart('fat')"
+                                            :class="{ 'bg-yellow-100 dark:bg-yellow-800': showCharts.fat }"
+                                        >
+                                            Fat
+                                        </SecondaryButton>
+                                    </div>
+                                    
+                                    <!-- Charts -->
+                                    <div class="space-y-4">
+                                        <div v-if="showCharts.protein" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                            <h5 class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">Protein (g)</h5>
+                                            <div id="protein-chart"></div>
+                                        </div>
+                                        <div v-if="showCharts.carbs" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                            <h5 class="text-sm font-medium text-green-600 dark:text-green-400 mb-2">Carbs (g)</h5>
+                                            <div id="carbs-chart"></div>
+                                        </div>
+                                        <div v-if="showCharts.fat" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                            <h5 class="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">Fat (g)</h5>
+                                            <div id="fat-chart"></div>
                                         </div>
                                     </div>
                                 </div>
