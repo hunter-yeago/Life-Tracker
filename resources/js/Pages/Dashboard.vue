@@ -49,9 +49,9 @@ const carbsChart = ref<HTMLDivElement>();
 const fatChart = ref<HTMLDivElement>();
 
 const showMacroCharts = ref({
-    protein: false,
-    carbs: false,
-    fat: false
+    protein: true,
+    carbs: true,
+    fat: true
 });
 
 const monthOptions = computed(() => {
@@ -101,6 +101,14 @@ onMounted(() => {
     if (weightChart.value && props.weightStats.weightByDay.length > 0) {
         createWeightChart();
     }
+    // Create macro charts by default
+    if (props.nutritionStats.macrosByDay.length > 0) {
+        nextTick(() => {
+            createMacroChart('protein');
+            createMacroChart('carbs');
+            createMacroChart('fat');
+        });
+    }
 });
 
 // Watch for changes to recreate charts when month changes
@@ -131,6 +139,21 @@ watch(
         }
     }
 );
+
+function calculateLinearRegression(data: number[][]): { slope: number; intercept: number } {
+    const n = data.length;
+    if (n < 2) return { slope: 0, intercept: 0 };
+    
+    const sumX = data.reduce((sum, point) => sum + point[0], 0);
+    const sumY = data.reduce((sum, point) => sum + point[1], 0);
+    const sumXY = data.reduce((sum, point) => sum + point[0] * point[1], 0);
+    const sumXX = data.reduce((sum, point) => sum + point[0] * point[0], 0);
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    return { slope, intercept };
+}
 
 function createCalorieChart() {
     if (!calorieChart.value) return;
@@ -248,7 +271,27 @@ function createCalorieChart() {
         .y(d => y(d.calories))
         .curve(d3.curveMonotoneX);
 
-    // Add the line
+    // Calculate linear regression
+    const regression = calculateLinearRegression(processedData.map(d => [d.date.getTime(), d.calories]));
+    const regressionLine = processedData.map(d => ({
+        date: d.date,
+        value: regression.slope * d.date.getTime() + regression.intercept
+    }));
+
+    // Add regression line first (so it appears behind the main line)
+    svg.append('path')
+        .datum(regressionLine)
+        .attr('fill', 'none')
+        .attr('stroke', '#10B981')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '5,5')
+        .attr('opacity', 0.7)
+        .attr('d', d3.line<any>()
+            .x(d => x(d.date))
+            .y(d => y(d.value))
+        );
+
+    // Add the main line
     svg.append('path')
         .datum(processedData)
         .attr('fill', 'none')
@@ -490,7 +533,27 @@ function createWeightChart() {
         .y(d => y(d.weight))
         .curve(d3.curveMonotoneX);
 
-    // Add the line
+    // Calculate linear regression for weight
+    const weightRegression = calculateLinearRegression(processedData.map(d => [d.date.getTime(), d.weight]));
+    const weightRegressionLine = processedData.map(d => ({
+        date: d.date,
+        value: weightRegression.slope * d.date.getTime() + weightRegression.intercept
+    }));
+
+    // Add regression line first (so it appears behind the main line)
+    svg.append('path')
+        .datum(weightRegressionLine)
+        .attr('fill', 'none')
+        .attr('stroke', '#3B82F6')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '5,5')
+        .attr('opacity', 0.7)
+        .attr('d', d3.line<any>()
+            .x(d => x(d.date))
+            .y(d => y(d.value))
+        );
+
+    // Add the main line
     svg.append('path')
         .datum(processedData)
         .attr('fill', 'none')
@@ -715,7 +778,27 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
         .y(d => y(d.value))
         .curve(d3.curveMonotoneX);
 
-    // Add the line
+    // Calculate linear regression for macro
+    const macroRegression = calculateLinearRegression(processedData.map(d => [d.date.getTime(), d.value]));
+    const macroRegressionLine = processedData.map(d => ({
+        date: d.date,
+        value: macroRegression.slope * d.date.getTime() + macroRegression.intercept
+    }));
+
+    // Add regression line first (so it appears behind the main line)
+    svg.append('path')
+        .datum(macroRegressionLine)
+        .attr('fill', 'none')
+        .attr('stroke', colors[macro])
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '5,5')
+        .attr('opacity', 0.7)
+        .attr('d', d3.line<any>()
+            .x(d => x(d.date))
+            .y(d => y(d.value))
+        );
+
+    // Add the main line
     svg.append('path')
         .datum(processedData)
         .attr('fill', 'none')
