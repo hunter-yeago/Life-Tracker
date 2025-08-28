@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Artisan;
 
 class FoodType extends Model
 {
@@ -49,5 +50,37 @@ class FoodType extends Model
     public function scopeOneTimeItems($query)
     {
         return $query->where('is_one_time_item', true);
+    }
+
+    protected static function booted(): void
+    {
+        static::updated(function (FoodType $foodType) {
+            // Check if any nutritional values were changed
+            $nutritionalFields = [
+                'calories_per_serving',
+                'protein_per_serving',
+                'carbs_per_serving',
+                'fat_per_serving'
+            ];
+
+            $hasNutritionalChanges = false;
+            foreach ($nutritionalFields as $field) {
+                if ($foodType->wasChanged($field)) {
+                    $hasNutritionalChanges = true;
+                    break;
+                }
+            }
+
+            if ($hasNutritionalChanges) {
+                // Recalculate nutritional values for all food entries of this type
+                \Log::info("Recalculating nutrition for food type: " . $foodType->name);
+                
+                $exitCode = Artisan::call('food:recalculate-nutrition', [
+                    '--food-type-id' => $foodType->id,
+                ]);
+                
+                \Log::info("Recalculation completed with exit code: " . $exitCode);
+            }
+        });
     }
 }

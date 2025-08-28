@@ -84,14 +84,23 @@ async function viewFoodType(foodType: FoodType) {
     }
 }
 
+function formatDecimalValue(value: number): string {
+    // Convert to string and remove trailing .00
+    const str = value.toString();
+    if (str.endsWith('.00')) {
+        return str.slice(0, -3);
+    }
+    return str;
+}
+
 function editFoodType(foodType: FoodType) {
     selectedFoodType.value = foodType;
     editForm.name = foodType.name;
     editForm.description = foodType.description || '';
-    editForm.calories_per_serving = foodType.calories_per_serving.toString();
-    editForm.protein_per_serving = foodType.protein_per_serving.toString();
-    editForm.carbs_per_serving = foodType.carbs_per_serving.toString();
-    editForm.fat_per_serving = foodType.fat_per_serving.toString();
+    editForm.calories_per_serving = formatDecimalValue(foodType.calories_per_serving);
+    editForm.protein_per_serving = formatDecimalValue(foodType.protein_per_serving);
+    editForm.carbs_per_serving = formatDecimalValue(foodType.carbs_per_serving);
+    editForm.fat_per_serving = formatDecimalValue(foodType.fat_per_serving);
     editForm.category = foodType.category || '';
     showEditModal.value = true;
 }
@@ -484,7 +493,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                     Edit Food Type
                 </h3>
 
-                <div class="space-y-4">
+                <form @submit.prevent="updateFoodType" @keydown.enter.prevent="updateFoodType" class="space-y-4">
                     <div>
                         <InputLabel for="name" value="Name" />
                         <TextInput
@@ -576,16 +585,15 @@ const filteredOneTimeFoodTypes = computed(() => {
                             <InputError :message="editForm.errors.fat_per_serving" class="mt-2" />
                         </div>
                     </div>
-                </div>
-
-                <div class="mt-6 flex justify-end gap-3">
-                    <SecondaryButton @click="closeModal">
-                        Cancel
-                    </SecondaryButton>
-                    <PrimaryButton @click="updateFoodType" :disabled="editForm.processing">
-                        Save Changes
-                    </PrimaryButton>
-                </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <SecondaryButton type="button" @click="closeModal">
+                            Cancel
+                        </SecondaryButton>
+                        <PrimaryButton type="submit" :disabled="editForm.processing">
+                            Save Changes
+                        </PrimaryButton>
+                    </div>
+                </form>
             </div>
         </Modal>
 
