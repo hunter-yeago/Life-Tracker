@@ -165,7 +165,7 @@ function createCalorieChart() {
 
     // Clear previous chart and tooltips
     d3.select(calorieChart.value).selectAll('*').remove();
-    d3.selectAll('.tooltip').remove();
+    d3.selectAll('.calorie-tooltip').remove();
 
     const svg = d3.select(calorieChart.value)
         .append('svg')
@@ -299,10 +299,10 @@ function createCalorieChart() {
         .attr('stroke-width', 2)
         .attr('d', line);
 
-    // Create tooltip div
+    // Create tooltip div with unique class
     const tooltip = d3.select('body')
         .append('div')
-        .attr('class', 'tooltip')
+        .attr('class', 'calorie-tooltip')
         .style('opacity', 0)
         .style('position', 'absolute')
         .style('background', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
@@ -354,51 +354,71 @@ function createCalorieChart() {
     });
 
     // Add dots with hover functionality (after exclusion bars so they render on top)
-    const dots = svg.selectAll('.dot')
+    svg.selectAll('.calorie-dot')
         .data(processedData)
         .enter().append('circle')
-        .attr('class', 'dot')
+        .attr('class', 'calorie-dot')
         .attr('cx', d => x(d.date!))
         .attr('cy', d => y(d.calories))
-        .attr('r', 4)
+        .attr('r', 5)
         .attr('fill', '#10B981')
-        .style('cursor', 'pointer');
-    
-    dots.on('mouseover', function(event, d) {
-            d3.select(this).attr('r', 6);
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function(event, d) {
+            // Make dot bigger on hover
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr('r', 7);
             
             const formatTooltipDate = d3.timeFormat('%B %d, %Y');
             let tooltipContent = `
-                <div style="color: ${textColor};">
-                    <div style="font-weight: 600; margin-bottom: 6px;">${formatTooltipDate(d.date)}</div>
-                    <div style="margin-bottom: 4px;">Calories: <span style="font-weight: 500;">${Math.round(d.calories)}</span></div>
+                <div style="color: ${textColor}; font-family: ui-sans-serif, system-ui, sans-serif;">
+                    <div style="font-weight: 600; margin-bottom: 8px; font-size: 14px;">${formatTooltipDate(d.date)}</div>
+                    <div style="margin-bottom: 4px; font-size: 13px;">
+                        <span style="color: #10B981; font-weight: 600;">${Math.round(d.calories)}</span> calories
+                    </div>
             `;
             
             if (d.notes && d.notes.length > 0) {
-                tooltipContent += `<div style="border-top: 1px solid ${isDarkMode ? '#4B5563' : '#E5E7EB'}; padding-top: 6px; margin-top: 6px;">`;
-                tooltipContent += `<div style="font-weight: 500; margin-bottom: 4px;">Notes:</div>`;
-                d.notes.forEach(note => {
-                    if (note && note.trim()) {
-                        tooltipContent += `<div style="margin-bottom: 2px; font-size: 12px;">• ${note}</div>`;
-                    }
-                });
-                tooltipContent += `</div>`;
+                const validNotes = d.notes.filter(note => note && note.trim());
+                if (validNotes.length > 0) {
+                    tooltipContent += `<div style="border-top: 1px solid ${isDarkMode ? '#4B5563' : '#E5E7EB'}; padding-top: 6px; margin-top: 6px;">`;
+                    tooltipContent += `<div style="font-weight: 500; margin-bottom: 4px; font-size: 12px; color: ${isDarkMode ? '#9CA3AF' : '#6B7280'};">Notes:</div>`;
+                    validNotes.forEach(note => {
+                        tooltipContent += `<div style="margin-bottom: 2px; font-size: 11px; line-height: 1.3;">• ${note}</div>`;
+                    });
+                    tooltipContent += `</div>`;
+                }
             }
             
             tooltipContent += `</div>`;
             
-            tooltip.transition().duration(200).style('opacity', 1);
-            tooltip.html(tooltipContent)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 10) + 'px');
+            tooltip
+                .style('opacity', 0)
+                .html(tooltipContent)
+                .style('left', (event.pageX + 12) + 'px')
+                .style('top', (event.pageY - 8) + 'px')
+                .transition()
+                .duration(200)
+                .style('opacity', 1);
         })
         .on('mousemove', function(event) {
-            tooltip.style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 10) + 'px');
+            tooltip
+                .style('left', (event.pageX + 12) + 'px')
+                .style('top', (event.pageY - 8) + 'px');
         })
-        .on('mouseout', function() {
-            d3.select(this).attr('r', 4);
-            tooltip.transition().duration(200).style('opacity', 0);
+        .on('mouseleave', function() {
+            d3.select(this)
+                .transition()
+                .duration(150)
+                .attr('r', 5);
+            
+            tooltip
+                .transition()
+                .duration(200)
+                .style('opacity', 0);
         });
 
     // Add axes with improved styling
