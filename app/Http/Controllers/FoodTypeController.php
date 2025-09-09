@@ -19,8 +19,7 @@ class FoodTypeController extends Controller
                     ->orWhere('description', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $oneTimeFoodTypes = FoodType::oneTimeItems()
             ->when($search, function ($query, $search) {
@@ -31,7 +30,11 @@ class FoodTypeController extends Controller
             ->get();
 
         return Inertia::render('FoodTypes/Index', [
-            'regularFoodTypes' => $regularFoodTypes,
+            'regularFoodTypes' => [
+                'data' => $regularFoodTypes,
+                'links' => [],
+                'meta' => []
+            ],
             'oneTimeFoodTypes' => $oneTimeFoodTypes,
             'search' => $search,
         ]);
