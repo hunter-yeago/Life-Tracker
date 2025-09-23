@@ -7,6 +7,7 @@ use App\Http\Controllers\FoodController;
 use App\Http\Controllers\FoodTypeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkoutController;
+use App\Http\Controllers\WorkoutTypeController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -52,6 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('api/food-types/{food_type}/usage', [FoodTypeController::class, 'usage'])->name('food-types.usage');
     Route::get('api/food-types/{food_type}/macro-data', [FoodTypeController::class, 'macroData'])->name('food-types.macro-data');
     Route::resource('food-types', FoodTypeController::class)->except(['create']);
+    Route::post('workout-types', [WorkoutTypeController::class, 'store'])->name('workout-types.store');
 });
 
 require __DIR__.'/auth.php';
