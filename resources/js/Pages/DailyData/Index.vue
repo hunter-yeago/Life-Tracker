@@ -44,7 +44,7 @@ interface Workout {
     sets?: number;
     reps?: number;
     weight?: number;
-    distance?: number;
+    duration_minutes?: number;
     difficulty?: string;
     left_sets?: number;
     left_reps?: number;
@@ -129,6 +129,7 @@ const editForm = ref({
     notes: ''
 });
 const showCreateFoodType = ref(false);
+const showCreateWorkoutType = ref(false);
 
 const foodForm = useForm({
     food_type_id: '',
@@ -146,12 +147,20 @@ const createFoodTypeForm = useForm({
     is_one_time_item: false,
 });
 
+const createWorkoutTypeForm = useForm({
+    name: '',
+    muscle_group: '',
+    equipment_needed: '',
+    sides: 'both',
+    description: '',
+});
+
 const workoutForm = useForm({
     workout_type_id: '',
     sets: '',
     reps: '',
     weight: '',
-    distance: '',
+    duration_minutes: '',
     difficulty: '',
     left_sets: '',
     left_reps: '',
@@ -245,18 +254,41 @@ function changeDate(event: Event) {
     });
 }
 
+function handleDateKeyup(event: KeyboardEvent) {
+    // Handle typing into the date input - trigger navigation on Enter or when a complete date is typed
+    const target = event.target as HTMLInputElement;
+
+    if (event.key === 'Enter' ||
+        (target.value !== props.selectedDate &&
+         target.value.match(/^\d{4}-\d{2}-\d{2}$/) &&
+         target.value.length === 10)) {
+
+        router.get(route('daily-data.index'), { date: target.value }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Restore focus to the date input after navigation
+                setTimeout(() => {
+                    if (dateInput.value) {
+                        dateInput.value.focus();
+                    }
+                }, 50);
+            }
+        });
+    }
+}
+
 function handleDateKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
         event.preventDefault();
         const currentDate = new Date(props.selectedDate);
         const newDate = new Date(currentDate);
-        
+
         if (event.key === 'ArrowUp') {
             newDate.setDate(currentDate.getDate() + 1);
         } else {
             newDate.setDate(currentDate.getDate() - 1);
         }
-        
+
         const formattedDate = newDate.toISOString().split('T')[0];
         router.get(route('daily-data.index'), { date: formattedDate }, {
             preserveScroll: true,
@@ -312,7 +344,7 @@ function submitWorkout() {
     workoutForm.post(route('daily-data.workout'), {
         onSuccess: () => {
             showWorkoutForm.value = false;
-            workoutForm.reset('workout_type_id', 'sets', 'reps', 'weight', 'distance', 'difficulty', 'left_sets', 'left_reps', 'left_weight', 'left_difficulty', 'right_sets', 'right_reps', 'right_weight', 'right_difficulty', 'notes');
+            workoutForm.reset('workout_type_id', 'sets', 'reps', 'weight', 'duration_minutes', 'difficulty', 'left_sets', 'left_reps', 'left_weight', 'left_difficulty', 'right_sets', 'right_reps', 'right_weight', 'right_difficulty', 'notes');
         }
     });
 }
@@ -472,13 +504,21 @@ function updateSelectedFoodType() {
     }
 }
 
+function updateSelectedWorkoutType() {
+    if (workoutForm.workout_type_id === 'create-new') {
+        showCreateWorkoutType.value = true;
+    } else {
+        showCreateWorkoutType.value = false;
+    }
+}
+
 function submitCreateFoodType() {
     createFoodTypeForm.post(route('food-types.store'), {
         onSuccess: () => {
             const foodTypeName = createFoodTypeForm.name;
             createFoodTypeForm.reset();
             showCreateFoodType.value = false;
-            
+
             // Reload the page to get the updated food types
             router.reload({
                 only: ['foodTypes'],
@@ -494,6 +534,32 @@ function submitCreateFoodType() {
         },
         onError: (errors) => {
             console.error('Food type creation failed:', errors);
+        }
+    });
+}
+
+function submitCreateWorkoutType() {
+    createWorkoutTypeForm.post(route('workout-types.store'), {
+        onSuccess: () => {
+            const workoutTypeName = createWorkoutTypeForm.name;
+            createWorkoutTypeForm.reset();
+            showCreateWorkoutType.value = false;
+
+            // Reload the page to get the updated workout types
+            router.reload({
+                only: ['workoutTypes'],
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    // Auto-select the newly created workout type by finding it in the updated list
+                    const newWorkoutType = page.props.workoutTypes?.find((wt: any) => wt.name === workoutTypeName);
+                    if (newWorkoutType) {
+                        workoutForm.workout_type_id = newWorkoutType.id.toString();
+                    }
+                }
+            });
+        },
+        onError: (errors) => {
+            console.error('Workout type creation failed:', errors);
         }
     });
 }
@@ -551,6 +617,7 @@ function getPhaseColor(phase: string) {
                     :value="selectedDate"
                     @change="changeDate"
                     @keydown="handleDateKeydown"
+                    @keyup="handleDateKeyup"
                     class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                 />
             </div>
@@ -1224,10 +1291,12 @@ function getPhaseColor(phase: string) {
                                 <select
                                     id="workout_type_id"
                                     v-model="workoutForm.workout_type_id"
+                                    @change="updateSelectedWorkoutType"
                                     class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                                    required
+                                    :required="!showCreateWorkoutType"
                                 >
                                     <option value="">Select workout type...</option>
+                                    <option value="create-new">➕ Create New Workout</option>
                                     <optgroup v-for="muscleGroup in [...new Set(workoutTypes.map(wt => wt.muscle_group))]" :key="muscleGroup" :label="muscleGroup">
                                         <option v-for="workoutType in workoutTypes.filter(wt => wt.muscle_group === muscleGroup)" :key="workoutType.id" :value="workoutType.id">
                                             {{ workoutType.name }}
@@ -1239,17 +1308,16 @@ function getPhaseColor(phase: string) {
                             <!-- Cardio Fields -->
                             <div v-if="isCardioWorkout">
                                 <div>
-                                    <InputLabel for="distance" value="Distance (miles)" />
+                                    <InputLabel for="duration_minutes" value="Duration (minutes)" />
                                     <TextInput
-                                        id="distance"
+                                        id="duration_minutes"
                                         type="number"
-                                        step="0.1"
-                                        min="0"
-                                        v-model="workoutForm.distance"
+                                        min="1"
+                                        v-model="workoutForm.duration_minutes"
                                         class="w-full"
-                                        placeholder="e.g., 3.1"
+                                        placeholder="e.g., 30"
                                     />
-                                    <InputError :message="workoutForm.errors.distance" />
+                                    <InputError :message="workoutForm.errors.duration_minutes" />
                                 </div>
                             </div>
                             
@@ -1454,6 +1522,101 @@ function getPhaseColor(phase: string) {
                         </form>
                     </div>
 
+                    <!-- Create New Workout Type Form -->
+                    <div v-if="showCreateWorkoutType" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg">
+                        <div class="flex justify-between items-center mb-4">
+                            <h5 class="text-lg font-semibold text-blue-800 dark:text-blue-200">Create New Workout Type</h5>
+                            <button
+                                @click="showCreateWorkoutType = false; workoutForm.workout_type_id = ''"
+                                class="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="submitCreateWorkoutType" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <InputLabel for="workout_name" value="Workout Name *" />
+                                    <TextInput
+                                        id="workout_name"
+                                        type="text"
+                                        class="w-full"
+                                        v-model="createWorkoutTypeForm.name"
+                                        placeholder="e.g., Running, Bench Press"
+                                        required
+                                    />
+                                    <InputError class="mt-2" :message="createWorkoutTypeForm.errors.name" />
+                                </div>
+                                <div>
+                                    <InputLabel for="muscle_group" value="Muscle Group *" />
+                                    <select
+                                        id="muscle_group"
+                                        v-model="createWorkoutTypeForm.muscle_group"
+                                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        required
+                                    >
+                                        <option value="">Select muscle group...</option>
+                                        <option value="Cardio">Cardio</option>
+                                        <option value="Chest">Chest</option>
+                                        <option value="Back">Back</option>
+                                        <option value="Shoulders">Shoulders</option>
+                                        <option value="Arms">Arms</option>
+                                        <option value="Legs">Legs</option>
+                                        <option value="Core">Core</option>
+                                        <option value="Full Body">Full Body</option>
+                                    </select>
+                                    <InputError class="mt-2" :message="createWorkoutTypeForm.errors.muscle_group" />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <InputLabel for="equipment_needed" value="Equipment Needed" />
+                                    <TextInput
+                                        id="equipment_needed"
+                                        type="text"
+                                        class="w-full"
+                                        v-model="createWorkoutTypeForm.equipment_needed"
+                                        placeholder="e.g., Dumbbells, None"
+                                    />
+                                    <InputError class="mt-2" :message="createWorkoutTypeForm.errors.equipment_needed" />
+                                </div>
+                                <div>
+                                    <InputLabel for="sides" value="Exercise Type *" />
+                                    <select
+                                        id="sides"
+                                        v-model="createWorkoutTypeForm.sides"
+                                        class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                        required
+                                    >
+                                        <option value="both">Both sides together</option>
+                                        <option value="left_right">Left and right separately</option>
+                                    </select>
+                                    <InputError class="mt-2" :message="createWorkoutTypeForm.errors.sides" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <InputLabel for="workout_description" value="Description" />
+                                <textarea
+                                    id="workout_description"
+                                    v-model="createWorkoutTypeForm.description"
+                                    rows="2"
+                                    class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="Optional description or instructions..."
+                                ></textarea>
+                                <InputError class="mt-2" :message="createWorkoutTypeForm.errors.description" />
+                            </div>
+
+                            <div class="flex justify-end">
+                                <PrimaryButton :disabled="createWorkoutTypeForm.processing">
+                                    Create Workout Type
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- Workout List -->
                     <div v-if="workouts.length > 0" class="space-y-2">
                         <div v-for="workout in workouts" :key="workout.id" class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -1465,7 +1628,7 @@ function getPhaseColor(phase: string) {
                                     <div class="text-sm text-gray-500 dark:text-gray-400 space-y-1">
                                         <!-- Cardio Display -->
                                         <div v-if="workout.workout_type.muscle_group === 'Cardio'">
-                                            <span v-if="workout.distance">{{ workout.distance }} mi</span>
+                                            <span v-if="workout.duration_minutes">{{ workout.duration_minutes }} min</span>
                                         </div>
                                         
                                         <!-- Both Sides Strength Training Display -->
