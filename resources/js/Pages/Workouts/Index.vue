@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+
+interface WorkoutSet {
+    id: number;
+    set_number: number;
+    reps: number | null;
+    weight: number | null;
+    duration_seconds: number | null;
+    difficulty: string | null;
+}
 
 interface Workout {
     id: number;
@@ -9,12 +18,8 @@ interface Workout {
         name: string;
         muscle_group: string;
     };
-    sets: number;
-    reps: number;
-    weight: number;
-    distance: number;
-    both_sides: boolean;
-    difficulty: string;
+    sets: WorkoutSet[];
+    notes: string | null;
     performed_at: string;
 }
 
@@ -27,6 +32,11 @@ interface Props {
 }
 
 defineProps<Props>();
+
+const formatDifficulty = (difficulty: string | null) => {
+    if (!difficulty) return '';
+    return difficulty.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
 </script>
 
 <template>
@@ -39,7 +49,7 @@ defineProps<Props>();
                     Your Workouts
                 </h2>
                 <Link
-                    href="/workouts/create"
+                    :href="route('workouts.create')"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                 >
                     Log New Workout
@@ -54,7 +64,7 @@ defineProps<Props>();
                         <div v-if="workouts.data.length === 0" class="text-center py-8">
                             <p class="text-gray-500 dark:text-gray-400">No workouts logged yet.</p>
                             <Link
-                                href="/workouts/create"
+                                :href="route('workouts.create')"
                                 class="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                             >
                                 Log Your First Workout
@@ -80,32 +90,34 @@ defineProps<Props>();
                                         </p>
                                     </div>
                                     <div class="text-right">
-                                        <div v-if="workout.sets" class="text-sm text-gray-600 dark:text-gray-300">
-                                            {{ workout.sets }} sets × {{ workout.reps }} reps
+                                        <div class="text-sm text-gray-600 dark:text-gray-300">
+                                            {{ workout.sets.length }} sets
                                         </div>
-                                        <div v-if="workout.weight" class="text-sm text-gray-600 dark:text-gray-300">
-                                            {{ workout.weight }}kg
+                                        <div v-if="workout.sets.some(s => s.weight)" class="text-sm text-gray-600 dark:text-gray-300">
+                                            {{ Math.min(...workout.sets.filter(s => s.weight).map(s => s.weight)) }} -
+                                            {{ Math.max(...workout.sets.filter(s => s.weight).map(s => s.weight)) }}lbs
                                         </div>
-                                        <div v-if="workout.distance" class="text-sm text-gray-600 dark:text-gray-300">
-                                            {{ workout.distance }}km
+                                        <div v-if="workout.sets.some(s => s.reps)" class="text-sm text-gray-600 dark:text-gray-300">
+                                            {{ Math.min(...workout.sets.filter(s => s.reps).map(s => s.reps)) }} -
+                                            {{ Math.max(...workout.sets.filter(s => s.reps).map(s => s.reps)) }} reps
                                         </div>
-                                        <div v-if="workout.both_sides !== null" class="text-sm text-gray-600 dark:text-gray-300">
-                                            {{ workout.both_sides ? 'Both sides' : 'Left/Right separate' }}
-                                        </div>
-                                        <div v-if="workout.difficulty" class="text-sm text-gray-600 dark:text-gray-300">
-                                            Difficulty: {{ workout.difficulty.replace('_', ' ') }}
+                                        <div v-if="workout.sets.some(s => s.difficulty)" class="text-xs text-gray-500 dark:text-gray-400">
+                                            Best: {{ formatDifficulty(workout.sets.filter(s => s.difficulty).sort((a, b) => {
+                                                const order = ['easy', 'hard', 'really_hard', 'almost_fail', 'fail'];
+                                                return order.indexOf(a.difficulty) - order.indexOf(b.difficulty);
+                                            })[0]?.difficulty) }}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mt-3 flex space-x-2">
                                     <Link
-                                        :href="`/workouts/${workout.id}`"
+                                        :href="route('workouts.show', workout.id)"
                                         class="text-blue-600 hover:text-blue-800 text-sm"
                                     >
                                         View
                                     </Link>
                                     <Link
-                                        :href="`/workouts/${workout.id}/edit`"
+                                        :href="route('workouts.edit', workout.id)"
                                         class="text-green-600 hover:text-green-800 text-sm"
                                     >
                                         Edit

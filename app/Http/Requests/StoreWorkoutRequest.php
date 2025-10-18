@@ -23,14 +23,16 @@ class StoreWorkoutRequest extends FormRequest
     {
         return [
             'workout_type_id' => ['required', 'exists:workout_types,id'],
-            'sets' => ['nullable', 'integer', 'min:1'],
-            'reps' => ['nullable', 'integer', 'min:1'],
-            'weight' => ['nullable', 'numeric', 'min:0'],
-            'distance' => ['nullable', 'numeric', 'min:0'],
-            'both_sides' => ['boolean'],
-            'difficulty' => ['nullable', 'in:easy,hard,really_hard,almost_fail,fail'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'performed_at' => ['required', 'date'],
+            'sets' => ['required', 'array', 'min:1'],
+            'sets.*.set_number' => ['required', 'integer', 'min:1'],
+            'sets.*.reps' => ['nullable', 'integer', 'min:1'],
+            'sets.*.weight' => ['nullable', 'numeric', 'min:0'],
+            'sets.*.duration_seconds' => ['nullable', 'integer', 'min:1'],
+            'sets.*.difficulty' => ['nullable', 'in:easy,hard,really_hard,almost_fail,fail'],
+            'sets.*.completed' => ['boolean'],
+            'sets.*.notes' => ['nullable', 'string', 'max:500'],
         ];
     }
 

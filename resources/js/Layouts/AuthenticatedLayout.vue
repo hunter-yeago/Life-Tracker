@@ -57,6 +57,18 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Food Types
                                 </NavLink>
+                                <NavLink
+                                    :href="route('workouts.index')"
+                                    :active="route().current('workouts.*')"
+                                >
+                                    Workouts
+                                </NavLink>
+                                <NavLink
+                                    :href="route('workout-types.index')"
+                                    :active="route().current('workout-types.*')"
+                                >
+                                    Workout Types
+                                </NavLink>
                             </div>
                         </div>
 
@@ -181,6 +193,18 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('food-types.*')"
                         >
                             Food Types
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('workouts.index')"
+                            :active="route().current('workouts.*')"
+                        >
+                            Workouts
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('workout-types.index')"
+                            :active="route().current('workout-types.*')"
+                        >
+                            Workout Types
                         </ResponsiveNavLink>
                     </div>
 

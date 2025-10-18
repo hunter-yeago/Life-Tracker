@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Workout extends Model
 {
@@ -56,5 +57,22 @@ class Workout extends Model
     public function workoutType(): BelongsTo
     {
         return $this->belongsTo(WorkoutType::class);
+    }
+
+    public function sets(): HasMany
+    {
+        return $this->hasMany(WorkoutSet::class)->orderBy('set_number');
+    }
+
+    public function getTotalSetsAttribute(): int
+    {
+        return $this->sets()->count();
+    }
+
+    public function getTotalVolumeAttribute(): float
+    {
+        return $this->sets()->whereNotNull('weight')->whereNotNull('reps')
+            ->selectRaw('SUM(weight * reps) as volume')
+            ->value('volume') ?? 0;
     }
 }

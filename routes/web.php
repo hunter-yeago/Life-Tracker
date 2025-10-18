@@ -53,7 +53,14 @@ Route::middleware('auth')->group(function () {
     Route::get('api/food-types/{food_type}/usage', [FoodTypeController::class, 'usage'])->name('food-types.usage');
     Route::get('api/food-types/{food_type}/macro-data', [FoodTypeController::class, 'macroData'])->name('food-types.macro-data');
     Route::resource('food-types', FoodTypeController::class)->except(['create']);
+    Route::get('workout-types', [WorkoutTypeController::class, 'index'])->name('workout-types.index');
+    Route::get('workout-types/create', [WorkoutTypeController::class, 'create'])->name('workout-types.create');
     Route::post('workout-types', [WorkoutTypeController::class, 'store'])->name('workout-types.store');
+    Route::get('workout-types/{workoutType}', [WorkoutTypeController::class, 'show'])->name('workout-types.show');
+    Route::get('workout-types/{workoutType}/edit', [WorkoutTypeController::class, 'edit'])->name('workout-types.edit');
+    Route::put('workout-types/{workoutType}', [WorkoutTypeController::class, 'update'])->name('workout-types.update');
+    Route::patch('workout-types/{workoutType}', [WorkoutTypeController::class, 'update'])->name('workout-types.update');
+    Route::delete('workout-types/{workoutType}', [WorkoutTypeController::class, 'destroy'])->name('workout-types.destroy');
 });
 
 require __DIR__.'/auth.php';

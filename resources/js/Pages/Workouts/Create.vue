@@ -5,6 +5,7 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 interface WorkoutType {
     id: number;
@@ -12,25 +13,76 @@ interface WorkoutType {
     description: string;
     muscle_group: string;
     equipment_needed: string;
+    sides: string;
 }
 
 interface Props {
     workoutTypes: WorkoutType[];
+    preselected?: {
+        workout_type_id?: string;
+        performed_at?: string;
+    };
 }
 
 const props = defineProps<Props>();
 
+interface WorkoutSetData {
+    set_number: number;
+    reps: string;
+    weight: string;
+    duration_seconds: string;
+    difficulty: string;
+    completed: boolean;
+    notes: string;
+}
+
 const form = useForm({
-    workout_type_id: '',
-    sets: '',
-    reps: '',
-    weight: '',
-    distance: '',
-    both_sides: true,
-    difficulty: '',
+    workout_type_id: props.preselected?.workout_type_id || '',
     notes: '',
-    performed_at: new Date().toISOString().split('T')[0],
+    performed_at: props.preselected?.performed_at || new Date().toISOString().split('T')[0],
+    sets: [
+        {
+            set_number: 1,
+            reps: '',
+            weight: '',
+            duration_seconds: '',
+            difficulty: '',
+            completed: true,
+            notes: ''
+        }
+    ] as WorkoutSetData[],
 });
+
+const selectedWorkoutType = computed(() => {
+    return props.workoutTypes.find(type => type.id.toString() === form.workout_type_id);
+});
+
+const supportsSides = computed(() => {
+    return selectedWorkoutType.value?.sides === 'both' || selectedWorkoutType.value?.sides === 'separate';
+});
+
+const addSet = () => {
+    const nextSetNumber = Math.max(...form.sets.map(s => s.set_number)) + 1;
+    form.sets.push({
+        set_number: nextSetNumber,
+        reps: '',
+        weight: '',
+        duration_seconds: '',
+        difficulty: '',
+        completed: true,
+        notes: ''
+    });
+};
+
+const removeSet = (index: number) => {
+    if (form.sets.length > 1) {
+        form.sets.splice(index, 1);
+        // Renumber the remaining sets
+        form.sets.forEach((set, i) => {
+            set.set_number = i + 1;
+        });
+    }
+};
 
 const submit = () => {
     form.post(route('workouts.store'));
@@ -71,101 +123,103 @@ const submit = () => {
                                 <InputError class="mt-2" :message="form.errors.workout_type_id" />
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <InputLabel for="sets" value="Sets" />
-                                    <TextInput
-                                        id="sets"
-                                        type="number"
-                                        class="mt-1 block w-full"
-                                        v-model="form.sets"
-                                        placeholder="e.g., 3"
-                                    />
-                                    <InputError class="mt-2" :message="form.errors.sets" />
-                                </div>
-
-                                <div>
-                                    <InputLabel for="reps" value="Reps" />
-                                    <TextInput
-                                        id="reps"
-                                        type="number"
-                                        class="mt-1 block w-full"
-                                        v-model="form.reps"
-                                        placeholder="e.g., 10"
-                                    />
-                                    <InputError class="mt-2" :message="form.errors.reps" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <InputLabel for="weight" value="Weight (kg)" />
-                                <TextInput
-                                    id="weight"
-                                    type="number"
-                                    step="0.1"
-                                    class="mt-1 block w-full"
-                                    v-model="form.weight"
-                                    placeholder="e.g., 80.5"
-                                />
-                                <InputError class="mt-2" :message="form.errors.weight" />
-                            </div>
-
-                            <div>
-                                <InputLabel for="distance" value="Distance (km)" />
-                                <TextInput
-                                    id="distance"
-                                    type="number"
-                                    step="0.1"
-                                    class="mt-1 block w-full"
-                                    v-model="form.distance"
-                                    placeholder="e.g., 5.0"
-                                />
-                                <InputError class="mt-2" :message="form.errors.distance" />
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <InputLabel for="both_sides" value="Both Sides" />
-                                    <div class="mt-1 flex items-center space-x-6">
-                                        <label class="flex items-center">
-                                            <input 
-                                                type="radio" 
-                                                name="both_sides"
-                                                :value="true" 
-                                                v-model="form.both_sides"
-                                                class="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                            />
-                                            <span class="ml-2 text-sm text-gray-900 dark:text-gray-300">Both sides</span>
-                                        </label>
-                                        <label class="flex items-center">
-                                            <input 
-                                                type="radio" 
-                                                name="both_sides"
-                                                :value="false" 
-                                                v-model="form.both_sides"
-                                                class="border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                            />
-                                            <span class="ml-2 text-sm text-gray-900 dark:text-gray-300">Left/Right separate</span>
-                                        </label>
-                                    </div>
-                                    <InputError class="mt-2" :message="form.errors.both_sides" />
-                                </div>
-
-                                <div>
-                                    <InputLabel for="difficulty" value="Difficulty" />
-                                    <select
-                                        id="difficulty"
-                                        v-model="form.difficulty"
-                                        class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                            <!-- Sets Section -->
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Sets</h3>
+                                    <button
+                                        type="button"
+                                        @click="addSet"
+                                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
                                     >
-                                        <option value="">Select difficulty (optional)</option>
-                                        <option value="easy">Easy</option>
-                                        <option value="hard">Hard</option>
-                                        <option value="really_hard">Really Hard</option>
-                                        <option value="almost_fail">Almost Fail</option>
-                                        <option value="fail">Fail</option>
-                                    </select>
-                                    <InputError class="mt-2" :message="form.errors.difficulty" />
+                                        Add Set
+                                    </button>
+                                </div>
+
+                                <div
+                                    v-for="(set, index) in form.sets"
+                                    :key="set.set_number"
+                                    class="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                                >
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="font-medium text-gray-900 dark:text-white">Set {{ set.set_number }}</h4>
+                                        <button
+                                            v-if="form.sets.length > 1"
+                                            type="button"
+                                            @click="removeSet(index)"
+                                            class="text-red-600 hover:text-red-800 text-sm"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div>
+                                            <InputLabel :for="`reps_${index}`" value="Reps" />
+                                            <TextInput
+                                                :id="`reps_${index}`"
+                                                type="number"
+                                                class="mt-1 block w-full"
+                                                v-model="set.reps"
+                                                placeholder="10"
+                                            />
+                                            <InputError class="mt-2" :message="form.errors[`sets.${index}.reps`]" />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel :for="`weight_${index}`" value="Weight (lbs)" />
+                                            <TextInput
+                                                :id="`weight_${index}`"
+                                                type="number"
+                                                step="0.1"
+                                                class="mt-1 block w-full"
+                                                v-model="set.weight"
+                                                placeholder="60"
+                                            />
+                                            <InputError class="mt-2" :message="form.errors[`sets.${index}.weight`]" />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel :for="`duration_${index}`" value="Time (sec)" />
+                                            <TextInput
+                                                :id="`duration_${index}`"
+                                                type="number"
+                                                class="mt-1 block w-full"
+                                                v-model="set.duration_seconds"
+                                                placeholder="60"
+                                            />
+                                            <InputError class="mt-2" :message="form.errors[`sets.${index}.duration_seconds`]" />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel :for="`difficulty_${index}`" value="Difficulty" />
+                                            <select
+                                                :id="`difficulty_${index}`"
+                                                v-model="set.difficulty"
+                                                class="mt-1 block w-full text-xs border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            >
+                                                <option value="">-</option>
+                                                <option value="easy">Easy</option>
+                                                <option value="hard">Hard</option>
+                                                <option value="really_hard">Really Hard</option>
+                                                <option value="almost_fail">Almost Fail</option>
+                                                <option value="fail">Fail</option>
+                                            </select>
+                                            <InputError class="mt-2" :message="form.errors[`sets.${index}.difficulty`]" />
+                                        </div>
+                                    </div>
+
+                                    <div v-if="set.notes || form.sets.length > 1" class="mt-3">
+                                        <InputLabel :for="`notes_${index}`" value="Set Notes (optional)" />
+                                        <textarea
+                                            :id="`notes_${index}`"
+                                            v-model="set.notes"
+                                            class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            rows="2"
+                                            placeholder="Notes for this set..."
+                                        ></textarea>
+                                        <InputError class="mt-2" :message="form.errors[`sets.${index}.notes`]" />
+                                    </div>
                                 </div>
                             </div>
 
@@ -182,13 +236,13 @@ const submit = () => {
                             </div>
 
                             <div>
-                                <InputLabel for="notes" value="Notes (optional)" />
+                                <InputLabel for="notes" value="Workout Notes (optional)" />
                                 <textarea
                                     id="notes"
                                     v-model="form.notes"
                                     class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                     rows="3"
-                                    placeholder="Any additional notes about this workout..."
+                                    placeholder="Overall notes about this workout session..."
                                 ></textarea>
                                 <InputError class="mt-2" :message="form.errors.notes" />
                             </div>

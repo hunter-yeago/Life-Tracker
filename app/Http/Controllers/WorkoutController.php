@@ -14,7 +14,7 @@ class WorkoutController extends Controller
     public function index(): Response
     {
         $workouts = auth()->user()->workouts()
-            ->with('workoutType')
+            ->with(['workoutType', 'sets'])
             ->latest('performed_at')
             ->paginate(15);
 
@@ -29,22 +29,67 @@ class WorkoutController extends Controller
 
         return Inertia::render('Workouts/Create', [
             'workoutTypes' => $workoutTypes,
+            'preselected' => [
+                'workout_type_id' => request('workout_type_id'),
+                'performed_at' => request('performed_at'),
+            ],
         ]);
     }
 
     public function store(StoreWorkoutRequest $request): RedirectResponse
     {
-        auth()->user()->workouts()->create($request->validated());
+        $validatedData = $request->validated();
 
-        return redirect()->route('workouts.index')
-            ->with('success', 'Workout logged successfully!');
+        // Check if this workout already exists for this user, workout type, and date
+        $existingWorkout = auth()->user()->workouts()
+            ->where('workout_type_id', $validatedData['workout_type_id'])
+            ->whereDate('performed_at', $validatedData['performed_at'])
+            ->first();
+
+        if ($existingWorkout) {
+            // Add sets to existing workout
+            $workout = $existingWorkout;
+
+            // Get the next set number
+            $nextSetNumber = $workout->sets()->max('set_number') + 1;
+
+            foreach ($validatedData['sets'] as $setData) {
+                $setData['set_number'] = $nextSetNumber++;
+                $workout->sets()->create($setData);
+            }
+
+            $message = 'Sets added to existing workout successfully!';
+        } else {
+            // Create new workout
+            $workoutData = [
+                'workout_type_id' => $validatedData['workout_type_id'],
+                'notes' => $validatedData['notes'],
+                'performed_at' => $validatedData['performed_at'],
+            ];
+
+            $workout = auth()->user()->workouts()->create($workoutData);
+
+            // Create the sets with proper numbering
+            $setNumber = 1;
+            foreach ($validatedData['sets'] as $setData) {
+                $setData['set_number'] = $setNumber++;
+                $workout->sets()->create($setData);
+            }
+
+            $message = 'Workout logged successfully!';
+        }
+
+        return redirect()->route('workouts.show', $workout)
+            ->with('success', $message);
     }
 
     public function show(Workout $workout): Response
     {
         $this->authorize('view', $workout);
 
-        $workout->load('workoutType');
+        $workout->load(['workoutType', 'sets' => function ($query) {
+            $query->orderBy('set_number');
+        }]);
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout,

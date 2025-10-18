@@ -2,23 +2,78 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreWorkoutTypeRequest;
 use App\Models\WorkoutType;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class WorkoutTypeController extends Controller
 {
-    public function store(Request $request)
+    public function index(): Response
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:workout_types,name',
-            'muscle_group' => 'required|string|max:255',
-            'equipment_needed' => 'nullable|string|max:255',
-            'sides' => 'required|in:both,left_right',
-            'description' => 'nullable|string|max:1000',
+        $workoutTypes = WorkoutType::withCount('workouts')
+            ->orderBy('name')
+            ->paginate(15);
+
+        return Inertia::render('WorkoutTypes/Index', [
+            'workoutTypes' => $workoutTypes,
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('WorkoutTypes/Create');
+    }
+
+    public function store(StoreWorkoutTypeRequest $request): RedirectResponse
+    {
+        WorkoutType::create($request->validated());
+
+        return redirect()->route('workout-types.index')
+            ->with('success', 'Workout type created successfully!');
+    }
+
+    public function show(WorkoutType $workoutType): Response
+    {
+        $workoutType->load('workouts.user');
+
+        return Inertia::render('WorkoutTypes/Show', [
+            'workoutType' => $workoutType,
+        ]);
+    }
+
+    public function edit(WorkoutType $workoutType): Response
+    {
+        return Inertia::render('WorkoutTypes/Edit', [
+            'workoutType' => $workoutType,
+        ]);
+    }
+
+    public function update(StoreWorkoutTypeRequest $request, WorkoutType $workoutType): RedirectResponse
+    {
+        \Log::info('Update request', [
+            'validated' => $request->validated(),
+            'workoutType' => $workoutType->toArray(),
+            'route_param' => $request->route('workoutType'),
         ]);
 
-        WorkoutType::create($validated);
+        $workoutType->update($request->validated());
 
-        return back()->with('success', 'Workout type created successfully');
+        return redirect()->route('workout-types.index')
+            ->with('success', 'Workout type updated successfully!');
+    }
+
+    public function destroy(WorkoutType $workoutType): RedirectResponse
+    {
+        if ($workoutType->workouts()->count() > 0) {
+            return redirect()->route('workout-types.index')
+                ->with('error', 'Cannot delete workout type that has associated workouts.');
+        }
+
+        $workoutType->delete();
+
+        return redirect()->route('workout-types.index')
+            ->with('success', 'Workout type deleted successfully!');
     }
 }
