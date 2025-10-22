@@ -40,7 +40,9 @@ class DailyDataController extends Controller
         ];
 
         // Get workouts for this date
-        $workouts = Workout::with('workoutType')
+        $workouts = Workout::with(['workoutType', 'sets' => function ($query) {
+            $query->orderBy('set_number');
+        }])
             ->where('user_id', auth()->id())
             ->whereDate('performed_at', $selectedDate)
             ->orderBy('performed_at')
@@ -120,47 +122,61 @@ class DailyDataController extends Controller
     {
         $validated = $request->validate([
             'workout_type_id' => 'required|exists:workout_types,id',
-            'sets' => 'nullable|integer|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'weight' => 'nullable|numeric|min:0',
-            'duration_minutes' => 'nullable|integer|min:1',
-            'difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
-            'left_sets' => 'nullable|integer|min:0',
-            'left_reps' => 'nullable|integer|min:0',
-            'left_weight' => 'nullable|numeric|min:0',
-            'left_difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
-            'right_sets' => 'nullable|integer|min:0',
-            'right_reps' => 'nullable|integer|min:0',
-            'right_weight' => 'nullable|numeric|min:0',
-            'right_difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
             'notes' => 'nullable|string',
             'date' => 'required|date',
+            'sets' => 'required|array|min:1',
+            'sets.*.set_number' => 'required|integer|min:1',
+            'sets.*.reps' => 'nullable|integer|min:1',
+            'sets.*.weight' => 'nullable|numeric|min:0',
+            'sets.*.duration_seconds' => 'nullable|integer|min:1',
+            'sets.*.difficulty' => 'nullable|in:easy,hard,really_hard,almost_fail,fail',
+            'sets.*.completed' => 'boolean',
+            'sets.*.notes' => 'nullable|string|max:500',
         ]);
 
         // Use the selected date to set performed_at for proper date filtering
         $performedAt = Carbon::parse($validated['date'])->setTime(12, 0, 0);
 
-        Workout::create([
-            'user_id' => auth()->id(),
-            'workout_type_id' => $validated['workout_type_id'],
-            'sets' => $validated['sets'] ?: null,
-            'reps' => $validated['reps'] ?: null,
-            'weight' => $validated['weight'] ?: null,
-            'duration_minutes' => $validated['duration_minutes'] ?: null,
-            'difficulty' => $validated['difficulty'] ?: null,
-            'left_sets' => $validated['left_sets'] ?: null,
-            'left_reps' => $validated['left_reps'] ?: null,
-            'left_weight' => $validated['left_weight'] ?: null,
-            'left_difficulty' => $validated['left_difficulty'] ?: null,
-            'right_sets' => $validated['right_sets'] ?: null,
-            'right_reps' => $validated['right_reps'] ?: null,
-            'right_weight' => $validated['right_weight'] ?: null,
-            'right_difficulty' => $validated['right_difficulty'] ?: null,
-            'notes' => $validated['notes'],
-            'performed_at' => $performedAt,
-        ]);
+        // Check if this workout already exists for this user, workout type, and date
+        $existingWorkout = auth()->user()->workouts()
+            ->where('workout_type_id', $validated['workout_type_id'])
+            ->whereDate('performed_at', $validated['date'])
+            ->first();
 
-        return back()->with('success', 'Workout logged successfully');
+        if ($existingWorkout) {
+            // Add sets to existing workout
+            $workout = $existingWorkout;
+
+            // Get the next set number
+            $nextSetNumber = $workout->sets()->max('set_number') + 1;
+
+            foreach ($validated['sets'] as $setData) {
+                $setData['set_number'] = $nextSetNumber++;
+                $workout->sets()->create($setData);
+            }
+
+            $message = 'Sets added to existing workout successfully!';
+        } else {
+            // Create new workout
+            $workoutData = [
+                'workout_type_id' => $validated['workout_type_id'],
+                'notes' => $validated['notes'],
+                'performed_at' => $performedAt,
+            ];
+
+            $workout = auth()->user()->workouts()->create($workoutData);
+
+            // Create the sets with proper numbering
+            $setNumber = 1;
+            foreach ($validated['sets'] as $setData) {
+                $setData['set_number'] = $setNumber++;
+                $workout->sets()->create($setData);
+            }
+
+            $message = 'Workout logged successfully!';
+        }
+
+        return back()->with('success', $message);
     }
 
     public function resetDay(Request $request)
