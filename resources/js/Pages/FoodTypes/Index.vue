@@ -32,7 +32,7 @@ interface Props {
         meta: any;
     };
     oneTimeFoodTypes: FoodType[];
-    search: string;
+    search: string | null;
 }
 
 const props = defineProps<Props>();
