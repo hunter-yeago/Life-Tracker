@@ -59,6 +59,9 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "track": [
+            "@php artisan track"
         ]
     },
     "extra": {

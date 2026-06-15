@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\FoodTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Artisan;
 
 class FoodType extends Model
 {
-    /** @use HasFactory<\Database\Factories\FoodTypeFactory> */
+    /** @use HasFactory<FoodTypeFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -42,6 +43,11 @@ class FoodType extends Model
         return $this->hasMany(Food::class);
     }
 
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class);
+    }
+
     public function scopeRegularItems($query)
     {
         return $query->where('is_one_time_item', false);
@@ -60,7 +66,7 @@ class FoodType extends Model
                 'calories_per_serving',
                 'protein_per_serving',
                 'carbs_per_serving',
-                'fat_per_serving'
+                'fat_per_serving',
             ];
 
             $hasNutritionalChanges = false;
@@ -73,13 +79,13 @@ class FoodType extends Model
 
             if ($hasNutritionalChanges) {
                 // Recalculate nutritional values for all food entries of this type
-                \Log::info("Recalculating nutrition for food type: " . $foodType->name);
-                
+                \Log::info('Recalculating nutrition for food type: '.$foodType->name);
+
                 $exitCode = Artisan::call('food:recalculate-nutrition', [
                     '--food-type-id' => $foodType->id,
                 ]);
-                
-                \Log::info("Recalculation completed with exit code: " . $exitCode);
+
+                \Log::info('Recalculation completed with exit code: '.$exitCode);
             }
         });
     }

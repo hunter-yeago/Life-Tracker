@@ -711,7 +711,7 @@ function formatDuration(seconds: number): string {
                 </div>
 
                 <!-- Daily Note -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3">
+                <div class="rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <form @submit.prevent="submitDailyNote" class="flex items-start gap-3">
                         <div class="flex-1">
                             <textarea
@@ -730,31 +730,31 @@ function formatDuration(seconds: number): string {
 
                 <!-- Quick Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Weight</div>
                         <div class="text-2xl font-bold text-purple-600">
                             {{ dailyWeight ? `${Math.round(dailyWeight.weight * 10) / 10} lbs` : 'Not set' }}
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Calories Consumed</div>
                         <div class="text-2xl font-bold text-green-600">
                             {{ Math.round(dailyTotals.calories) }}
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Protein</div>
                         <div class="text-2xl font-bold text-blue-600">
                             {{ Math.round(dailyTotals.protein) }}g
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Carbs</div>
                         <div class="text-2xl font-bold text-orange-600">
                             {{ Math.round(dailyTotals.carbs) }}g
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="text-sm text-gray-500 dark:text-gray-400">Fat</div>
                         <div class="text-2xl font-bold text-purple-600">
                             {{ Math.round(dailyTotals.fat) }}g
@@ -763,7 +763,7 @@ function formatDuration(seconds: number): string {
                 </div>
 
                 <!-- Day-Level Exclusions -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Data Exclusions</h4>
                     <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                         Exclude entire day's data from calculations and charts. Excluded data affects averages and statistical analysis.
@@ -985,7 +985,7 @@ function formatDuration(seconds: number): string {
                 </div>
 
                 <!-- Weight Section -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex justify-between items-center mb-4">
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Daily Weight</h4>
                         <PrimaryButton @click="showWeightForm = !showWeightForm">
@@ -1062,7 +1062,7 @@ function formatDuration(seconds: number): string {
                 </div>
 
                 <!-- Food Section -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex justify-between items-center mb-4">
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Food Entries</h4>
                         <PrimaryButton @click="showFoodForm = !showFoodForm">
@@ -1228,7 +1228,7 @@ function formatDuration(seconds: number): string {
                                     id="is_one_time_item"
                                     type="checkbox"
                                     v-model="createFoodTypeForm.is_one_time_item"
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                    class="rounded border-gray-300 text-brand-600 shadow-sm focus:ring-brand-500"
                                 />
                                 <label for="is_one_time_item" class="ml-2 text-sm text-gray-900 dark:text-gray-300">
                                     One-time item (won't appear in dropdown for future meals)
@@ -1303,7 +1303,7 @@ function formatDuration(seconds: number): string {
                                             step="0.5"
                                             min="0"
                                             v-model="editForm.servings"
-                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                             placeholder="e.g., 1.5"
                                         />
                                     </div>
@@ -1314,7 +1314,7 @@ function formatDuration(seconds: number): string {
                                         <input
                                             type="text"
                                             v-model="editForm.notes"
-                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                             placeholder="Optional notes..."
                                         />
                                     </div>
@@ -1343,7 +1343,7 @@ function formatDuration(seconds: number): string {
                 </div>
 
                 <!-- Workout Section -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex justify-between items-center mb-4">
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Workout Entries</h4>
                         <PrimaryButton @click="showWorkoutForm = !showWorkoutForm">
@@ -1517,7 +1517,7 @@ function formatDuration(seconds: number): string {
                                                 <select
                                                     :id="`difficulty_${index}`"
                                                     v-model="set.difficulty"
-                                                    class="mt-1 block w-full text-xs border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                    class="mt-1 block w-full text-xs border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                                 >
                                                     <option value="">-</option>
                                                     <option value="easy">Easy</option>
@@ -1535,7 +1535,7 @@ function formatDuration(seconds: number): string {
                                             <textarea
                                                 :id="`notes_${index}`"
                                                 v-model="set.notes"
-                                                class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                class="mt-1 block w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                                 rows="2"
                                                 placeholder="Notes for this set..."
                                             ></textarea>
@@ -1548,7 +1548,7 @@ function formatDuration(seconds: number): string {
                                         <textarea
                                             id="workout_notes"
                                             v-model="workoutForm.notes"
-                                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                             rows="2"
                                             placeholder="Notes about this exercise..."
                                         ></textarea>

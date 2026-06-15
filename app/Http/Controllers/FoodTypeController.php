@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FoodType;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,21 +22,12 @@ class FoodTypeController extends Controller
             ->orderBy('name')
             ->get();
 
-        $oneTimeFoodTypes = FoodType::oneTimeItems()
-            ->when($search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            })
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('FoodTypes/Index', [
             'regularFoodTypes' => [
                 'data' => $regularFoodTypes,
                 'links' => [],
-                'meta' => []
+                'meta' => [],
             ],
-            'oneTimeFoodTypes' => $oneTimeFoodTypes,
             'search' => $search,
         ]);
     }
@@ -137,11 +129,11 @@ class FoodTypeController extends Controller
             ->orderBy('usage_date', 'desc')
             ->pluck('usage_date')
             ->groupBy(function ($date) {
-                return \Carbon\Carbon::parse($date)->format('Y-m');
+                return Carbon::parse($date)->format('Y-m');
             })
             ->map(function ($dates) {
                 return $dates->map(function ($date) {
-                    return \Carbon\Carbon::parse($date)->format('j');
+                    return Carbon::parse($date)->format('j');
                 })->sort()->values();
             });
 
@@ -161,7 +153,7 @@ class FoodTypeController extends Controller
                     'date' => $item->date,
                     'protein' => round($item->protein, 1),
                     'carbs' => round($item->carbs, 1),
-                    'fat' => round($item->fat, 1)
+                    'fat' => round($item->fat, 1),
                 ];
             });
 

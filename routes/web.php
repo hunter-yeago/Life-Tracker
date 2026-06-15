@@ -6,6 +6,7 @@ use App\Http\Controllers\DietPeriodController;
 use App\Http\Controllers\FoodController;
 use App\Http\Controllers\FoodTypeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\WorkoutController;
 use App\Http\Controllers\WorkoutTypeController;
 use Illuminate\Foundation\Application;
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('api/food-types/{food_type}/usage', [FoodTypeController::class, 'usage'])->name('food-types.usage');
     Route::get('api/food-types/{food_type}/macro-data', [FoodTypeController::class, 'macroData'])->name('food-types.macro-data');
     Route::resource('food-types', FoodTypeController::class)->except(['create']);
+    Route::resource('recipes', RecipeController::class);
     Route::get('workout-types', [WorkoutTypeController::class, 'index'])->name('workout-types.index');
     Route::get('workout-types/create', [WorkoutTypeController::class, 'create'])->name('workout-types.create');
     Route::post('workout-types', [WorkoutTypeController::class, 'store'])->name('workout-types.store');

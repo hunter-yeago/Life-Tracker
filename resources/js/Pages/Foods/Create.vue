@@ -277,7 +277,7 @@ onMounted(() => {
         <div class="py-12">
             <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <!-- Date Selector -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="flex items-center space-x-4">
                         <div class="flex-1">
                             <InputLabel for="selected_date" value="Select Date" />
@@ -298,7 +298,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Daily Totals -->
-                <div v-if="foods.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div v-if="foods.length > 0" class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Totals</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -329,7 +329,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Create New Food Type Form (shown when "Create New Food" is selected) -->
-                <div v-if="showCreateFoodType" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-green-200 dark:border-green-700">
+                <div v-if="showCreateFoodType" class="rounded-xl bg-white shadow-sm border-2 border-green-200 transition-shadow hover:shadow-md dark:border-green-700 dark:bg-gray-800">
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">Create New Food Type</h3>
@@ -421,7 +421,7 @@ onMounted(() => {
                                 <textarea
                                     id="description"
                                     v-model="createFoodTypeForm.description"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                     rows="2"
                                     placeholder="Additional details about this food..."
                                 ></textarea>
@@ -433,7 +433,7 @@ onMounted(() => {
                                     id="is_one_time_item"
                                     type="checkbox"
                                     v-model="createFoodTypeForm.is_one_time_item"
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                    class="rounded border-gray-300 text-brand-600 shadow-sm focus:ring-brand-500"
                                 />
                                 <label for="is_one_time_item" class="ml-2 text-sm text-gray-900 dark:text-gray-300">
                                     One-time item (won't appear in dropdown for future meals)
@@ -450,7 +450,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Add New Food Form -->
-                <div v-if="!showCreateFoodType" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div v-if="!showCreateFoodType" class="rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Food</h3>
                         <form @submit.prevent="submit" class="space-y-4">
@@ -460,7 +460,7 @@ onMounted(() => {
                                     id="food_type_id"
                                     v-model="form.food_type_id"
                                     @change="updateSelectedFoodType"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                 >
                                     <option value="create-new">➕ Create New Food</option>
                                     <option value="" v-if="foodTypes.length > 0">Select existing food type</option>
@@ -549,7 +549,7 @@ onMounted(() => {
                                 <textarea
                                     id="notes"
                                     v-model="form.notes"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                     rows="3"
                                     placeholder="Any additional notes about this food..."
                                 ></textarea>
@@ -576,7 +576,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Existing Foods for This Day -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div class="rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Foods for This Day</h3>
                         
@@ -668,7 +668,7 @@ onMounted(() => {
                                                 step="0.5"
                                                 min="0"
                                                 v-model="editForm.servings"
-                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                                 placeholder="e.g., 1.5"
                                             />
                                         </div>
@@ -679,7 +679,7 @@ onMounted(() => {
                                             <input
                                                 type="text"
                                                 v-model="editForm.notes"
-                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                class="w-full text-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                                 placeholder="Optional notes..."
                                             />
                                         </div>

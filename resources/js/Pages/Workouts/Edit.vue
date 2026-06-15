@@ -95,7 +95,7 @@ const supportsSides = computed(() => {
 
         <div class="py-12">
             <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6">
                         <form @submit.prevent="submit" class="space-y-6">
                             <div>
@@ -103,7 +103,7 @@ const supportsSides = computed(() => {
                                 <select
                                     id="workout_type_id"
                                     v-model="form.workout_type_id"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                 >
                                     <option value="">Select a workout type</option>
                                     <option
@@ -178,7 +178,7 @@ const supportsSides = computed(() => {
                                         <select
                                             id="difficulty"
                                             v-model="form.difficulty"
-                                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                         >
                                             <option value="">Select difficulty (optional)</option>
                                             <option value="easy">Easy</option>
@@ -240,7 +240,7 @@ const supportsSides = computed(() => {
                                             <select
                                                 id="left_difficulty"
                                                 v-model="form.left_difficulty"
-                                                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                             >
                                                 <option value="">Select difficulty (optional)</option>
                                                 <option value="easy">Easy</option>
@@ -300,7 +300,7 @@ const supportsSides = computed(() => {
                                             <select
                                                 id="right_difficulty"
                                                 v-model="form.right_difficulty"
-                                                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                             >
                                                 <option value="">Select difficulty (optional)</option>
                                                 <option value="easy">Easy</option>
@@ -332,7 +332,7 @@ const supportsSides = computed(() => {
                                 <textarea
                                     id="notes"
                                     v-model="form.notes"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 dark:focus:border-brand-600 focus:ring-brand-500 dark:focus:ring-brand-600 rounded-md shadow-sm"
                                     rows="3"
                                     placeholder="Any additional notes about this workout..."
                                 ></textarea>

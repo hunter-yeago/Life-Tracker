@@ -59,7 +59,7 @@ const formatDifficulty = (difficulty: string | null) => {
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6">
                         <div v-if="workouts.data.length === 0" class="text-center py-8">
                             <p class="text-gray-500 dark:text-gray-400">No workouts logged yet.</p>

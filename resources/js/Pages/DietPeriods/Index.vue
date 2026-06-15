@@ -176,7 +176,7 @@ function getDuration(period: DietPeriod) {
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
                 <!-- Current Period Card -->
-                <div v-if="currentPeriod" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+                <div v-if="currentPeriod" class="rounded-xl border border-gray-100 border-l-4 border-l-green-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:border-l-green-500 dark:bg-gray-800">
                     <div class="flex justify-between items-start">
                         <div>
                             <div class="flex items-center space-x-3 mb-2">
@@ -246,7 +246,7 @@ function getDuration(period: DietPeriod) {
                 </div>
 
                 <!-- Historical Periods -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div class="rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Period History</h3>
                     </div>

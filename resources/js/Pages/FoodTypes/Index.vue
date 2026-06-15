@@ -31,7 +31,6 @@ interface Props {
         links: any[];
         meta: any;
     };
-    oneTimeFoodTypes: FoodType[];
     search: string | null;
 }
 
@@ -252,15 +251,6 @@ const filteredRegularFoodTypes = computed(() => {
     );
 });
 
-const filteredOneTimeFoodTypes = computed(() => {
-    if (!searchQuery.value) return props.oneTimeFoodTypes;
-    
-    const query = searchQuery.value.toLowerCase();
-    return props.oneTimeFoodTypes.filter(foodType => 
-        foodType.name.toLowerCase().includes(query) ||
-        (foodType.description && foodType.description.toLowerCase().includes(query))
-    );
-});
 </script>
 
 <template>
@@ -298,7 +288,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <!-- Search Results -->
                     <div class="lg:col-span-1">
-                        <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                             <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
                                 Regular Food Types ({{ filteredRegularFoodTypes.length }})
                             </h3>
@@ -326,7 +316,7 @@ const filteredOneTimeFoodTypes = computed(() => {
 
                     <!-- Food Type Details -->
                     <div class="lg:col-span-2">
-                        <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                             <div v-if="selectedFoodType">
                                 <div class="mb-4 flex items-center justify-between">
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -465,35 +455,6 @@ const filteredOneTimeFoodTypes = computed(() => {
                     </div>
                 </div>
 
-                <!-- One-Time Items Section -->
-                <div v-if="filteredOneTimeFoodTypes.length > 0" class="mt-8">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                            One-Time Items ({{ filteredOneTimeFoodTypes.length }})
-                        </h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            These are specific meal items that were logged once and are not available for reuse in new food entries.
-                        </p>
-                        <div class="space-y-1 max-h-48 overflow-y-auto">
-                            <div
-                                v-for="foodType in filteredOneTimeFoodTypes"
-                                :key="foodType.id"
-                                class="cursor-pointer rounded p-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
-                                :class="{ 'bg-blue-50 dark:bg-blue-900': selectedFoodType?.id === foodType.id }"
-                                @click="viewFoodType(foodType)"
-                            >
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-medium text-gray-900 dark:text-white text-sm truncate">
-                                        {{ foodType.name }}
-                                    </div>
-                                </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">
-                                    {{ Math.round(foodType.calories_per_serving || 0) }} cal
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -590,7 +551,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                             id="create_is_one_time"
                             v-model="createForm.is_one_time_item"
                             type="checkbox"
-                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800"
+                            class="rounded border-gray-300 text-brand-600 shadow-sm focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:focus:ring-brand-600 dark:focus:ring-offset-gray-800"
                         />
                         <label for="create_is_one_time" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
                             One-time item (cannot be reused)
@@ -637,7 +598,7 @@ const filteredOneTimeFoodTypes = computed(() => {
                         <textarea
                             id="description"
                             v-model="editForm.description"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-indigo-600 dark:focus:ring-indigo-600"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:focus:border-brand-600 dark:focus:ring-brand-600"
                             rows="3"
                         ></textarea>
                         <InputError :message="editForm.errors.description" class="mt-2" />

@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             WorkoutTypeSeeder::class,
             FoodTypeSeeder::class,
+            VeganFatLossMealPrepSeeder::class,
+            VeganFatLossRecipeSeeder::class,
         ]);
 
         User::factory()->create([

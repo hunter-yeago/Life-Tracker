@@ -94,6 +94,27 @@ const currentViewLabel = computed(() => {
     }
 });
 
+const weightTrend = computed(() => {
+    const weightByDay = props.weightStats.weightByDay;
+    if (weightByDay.length < 2) {
+        return null;
+    }
+
+    const delta = weightByDay[weightByDay.length - 1].weight - weightByDay[0].weight;
+    return Math.round(delta * 10) / 10;
+});
+
+const daysLoggedCount = computed(() => {
+    return props.nutritionStats.caloriesByDay.length;
+});
+
+const totalDaysInRange = computed(() => {
+    const start = new Date(props.dateRange.start);
+    const end = new Date(props.dateRange.end);
+    const diffDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(diffDays, 1);
+});
+
 onMounted(() => {
     if (calorieChart.value && props.nutritionStats.caloriesByDay.length > 0) {
         createCalorieChart();
@@ -264,6 +285,25 @@ function createCalorieChart() {
                 .text(`Target: ${Math.round(period.target_calories)}`);
         }
     });
+
+    // Add gradient area fill under the line
+    const calorieGradient = svg.append('defs')
+        .append('linearGradient')
+        .attr('id', 'calorie-area-gradient')
+        .attr('x1', '0%').attr('y1', '0%')
+        .attr('x2', '0%').attr('y2', '100%');
+    calorieGradient.append('stop').attr('offset', '0%').attr('stop-color', '#10B981').attr('stop-opacity', 0.25);
+    calorieGradient.append('stop').attr('offset', '100%').attr('stop-color', '#10B981').attr('stop-opacity', 0);
+
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', 'url(#calorie-area-gradient)')
+        .attr('d', d3.area<any>()
+            .x(d => x(d.date))
+            .y0(height)
+            .y1(d => y(d.calories))
+            .curve(d3.curveMonotoneX)
+        );
 
     // Create line generator
     const line = d3.line<any>()
@@ -470,7 +510,7 @@ function createWeightChart() {
 
     // Clear previous chart and tooltips
     d3.select(weightChart.value).selectAll('*').remove();
-    d3.selectAll('.tooltip').remove();
+    d3.selectAll('.weight-tooltip').remove();
 
     const svg = d3.select(weightChart.value)
         .append('svg')
@@ -547,6 +587,25 @@ function createWeightChart() {
         }
     });
 
+    // Add gradient area fill under the line
+    const weightGradient = svg.append('defs')
+        .append('linearGradient')
+        .attr('id', 'weight-area-gradient')
+        .attr('x1', '0%').attr('y1', '0%')
+        .attr('x2', '0%').attr('y2', '100%');
+    weightGradient.append('stop').attr('offset', '0%').attr('stop-color', '#3B82F6').attr('stop-opacity', 0.25);
+    weightGradient.append('stop').attr('offset', '100%').attr('stop-color', '#3B82F6').attr('stop-opacity', 0);
+
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', 'url(#weight-area-gradient)')
+        .attr('d', d3.area<any>()
+            .x(d => x(d.date))
+            .y0(height)
+            .y1(d => y(d.weight))
+            .curve(d3.curveMonotoneX)
+        );
+
     // Create line generator
     const line = d3.line<any>()
         .x(d => x(d.date))
@@ -581,10 +640,10 @@ function createWeightChart() {
         .attr('stroke-width', 2)
         .attr('d', line);
 
-    // Create tooltip div
+    // Create tooltip div with unique class
     const tooltip = d3.select('body')
         .append('div')
-        .attr('class', 'tooltip')
+        .attr('class', 'weight-tooltip')
         .style('opacity', 0)
         .style('position', 'absolute')
         .style('background', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
@@ -598,10 +657,10 @@ function createWeightChart() {
         .style('pointer-events', 'none');
 
     // Add dots with hover functionality
-    svg.selectAll('.dot')
+    svg.selectAll('.weight-dot')
         .data(processedData)
         .enter().append('circle')
-        .attr('class', 'dot')
+        .attr('class', 'weight-dot')
         .attr('cx', d => x(d.date!))
         .attr('cy', d => y(d.weight))
         .attr('r', 4)
@@ -738,6 +797,7 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
 
     // Clear previous chart and tooltips
     d3.select(chartRef.value).selectAll('*').remove();
+    d3.selectAll(`.macro-tooltip-${macro}`).remove();
 
     const svg = d3.select(chartRef.value)
         .append('svg')
@@ -792,6 +852,25 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
     const gridColor = isDarkMode ? '#6B7280' : '#E5E7EB';
     const axisColor = isDarkMode ? '#9CA3AF' : '#9CA3AF';
 
+    // Add gradient area fill under the line
+    const macroGradient = svg.append('defs')
+        .append('linearGradient')
+        .attr('id', `macro-area-gradient-${macro}`)
+        .attr('x1', '0%').attr('y1', '0%')
+        .attr('x2', '0%').attr('y2', '100%');
+    macroGradient.append('stop').attr('offset', '0%').attr('stop-color', colors[macro]).attr('stop-opacity', 0.25);
+    macroGradient.append('stop').attr('offset', '100%').attr('stop-color', colors[macro]).attr('stop-opacity', 0);
+
+    svg.append('path')
+        .datum(processedData)
+        .attr('fill', `url(#macro-area-gradient-${macro})`)
+        .attr('d', d3.area<any>()
+            .x(d => x(d.date))
+            .y0(height)
+            .y1(d => y(d.value))
+            .curve(d3.curveMonotoneX)
+        );
+
     // Create line generator
     const line = d3.line<any>()
         .x(d => x(d.date))
@@ -826,10 +905,10 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
         .attr('stroke-width', 2)
         .attr('d', line);
 
-    // Create tooltip div
+    // Create tooltip div with unique class
     const tooltip = d3.select('body')
         .append('div')
-        .attr('class', 'tooltip')
+        .attr('class', `macro-tooltip-${macro}`)
         .style('opacity', 0)
         .style('position', 'absolute')
         .style('background', isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)')
@@ -843,10 +922,10 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
         .style('pointer-events', 'none');
 
     // Add dots with hover functionality
-    const dots = svg.selectAll('.dot')
+    const dots = svg.selectAll('.macro-dot')
         .data(processedData)
         .enter().append('circle')
-        .attr('class', 'dot')
+        .attr('class', 'macro-dot')
         .attr('cx', d => x(d.date!))
         .attr('cy', d => y(d.value))
         .attr('r', 4)
@@ -923,21 +1002,24 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
                         Life Tracker Dashboard
                     </h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Showing {{ currentViewLabel }}
+                    </p>
                 </div>
-                <div class="flex gap-4">
+                <div class="flex flex-wrap gap-3">
                     <!-- View Type Toggle -->
                     <div class="flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
                         <button
                             @click="changeDietPeriod(props.dietPeriods[0]?.id?.toString() || '')"
                             :class="[
                                 'px-3 py-2 text-sm font-medium transition-colors',
-                                currentViewType === 'diet-period' 
-                                    ? 'bg-blue-600 text-white' 
+                                currentViewType === 'diet-period'
+                                    ? 'bg-brand-600 text-white'
                                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                             ]"
                         >
@@ -947,8 +1029,8 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
                             @click="changeMonth(currentMonth)"
                             :class="[
                                 'px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600',
-                                currentViewType === 'month' 
-                                    ? 'bg-blue-600 text-white' 
+                                currentViewType === 'month'
+                                    ? 'bg-brand-600 text-white'
                                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                             ]"
                         >
@@ -957,11 +1039,11 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
                     </div>
 
                     <!-- Month Selector (when in month view) -->
-                    <select 
+                    <select
                         v-if="currentViewType === 'month'"
-                        :value="currentMonth" 
+                        :value="currentMonth"
                         @change="changeMonth(($event.target as HTMLSelectElement).value)"
-                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 focus:ring-brand-500"
                     >
                         <option v-for="month in monthOptions" :key="month.value" :value="month.value">
                             {{ month.label }}
@@ -969,11 +1051,11 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
                     </select>
 
                     <!-- Diet Period Selector (when in diet period view) -->
-                    <select 
+                    <select
                         v-if="currentViewType === 'diet-period'"
-                        :value="selectedDietPeriodId?.toString() || ''" 
+                        :value="selectedDietPeriodId?.toString() || ''"
                         @change="changeDietPeriod(($event.target as HTMLSelectElement).value)"
-                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                        class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-brand-500 focus:ring-brand-500"
                     >
                         <option value="">All Time</option>
                         <option v-for="period in dietPeriods" :key="period.id" :value="period.id.toString()">
@@ -985,43 +1067,96 @@ function createMacroChart(macro: 'protein' | 'carbs' | 'fat') {
         </template>
 
         <div class="py-12">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-6xl sm:px-6 lg:px-8">
                 <!-- Stats Cards -->
-                <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Daily Calories</h3>
-                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.averageDailyCalories) }}</p>
+                <div class="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="flex items-center gap-4 rounded-xl border border-gray-100 border-l-4 border-l-amber-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:border-l-amber-500 dark:bg-gray-800">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 3c.5 3-1.5 4.5-3 6-2 2-3 4-3 6.5a4.5 4.5 0 0 0 9 0c0-1.5-.5-2.5-1.5-3.5.5 2-.5 3-1.5 3-1.5 0-2-1-1.5-2.5.5-1.5 2-2 2-4.5 0-2-1.5-3.5-1.5-5Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Daily Calories</h3>
+                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ Math.round(nutritionStats.averageDailyCalories) }}</p>
+                        </div>
                     </div>
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Weight</h3>
-                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">
-                            {{ weightStats.weightByDay.length > 0 ? Math.round(weightStats.weightByDay[weightStats.weightByDay.length - 1].weight * 10) / 10 : 'N/A' }} lbs
-                        </p>
+                    <div class="flex items-center gap-4 rounded-xl border border-gray-100 border-l-4 border-l-brand-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:border-l-brand-500 dark:bg-gray-800">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-900/40 dark:text-brand-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.36-6.36-.7.7M6.34 17.66l-.7.7m12.02 0-.7-.7M6.34 6.34l-.7-.7M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Weight</h3>
+                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">
+                                {{ weightStats.weightByDay.length > 0 ? Math.round(weightStats.weightByDay[weightStats.weightByDay.length - 1].weight * 10) / 10 : 'N/A' }} lbs
+                            </p>
+                            <p v-if="weightTrend !== null" class="mt-1 flex items-center gap-1 text-xs font-medium" :class="weightTrend > 0 ? 'text-rose-500' : weightTrend < 0 ? 'text-emerald-500' : 'text-gray-400'">
+                                <svg v-if="weightTrend !== 0" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" :class="weightTrend > 0 ? '' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7 7 7M12 3v18" />
+                                </svg>
+                                {{ Math.abs(weightTrend) }} lbs this period
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 rounded-xl border border-gray-100 border-l-4 border-l-slate-400 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:border-l-slate-400 dark:bg-gray-800">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Days Logged</h3>
+                            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ daysLoggedCount }} / {{ totalDaysInRange }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 rounded-xl border border-gray-100 border-l-4 border-l-violet-500 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:border-l-violet-500 dark:bg-gray-800">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5 7.5 9l3 3 4.5-6 6 7.5M3 13.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18v-4.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Macros (total)</h3>
+                            <div class="mt-1 flex gap-3 text-sm font-semibold">
+                                <span class="text-blue-600 dark:text-blue-400">{{ Math.round(nutritionStats.totalProtein) }}g P</span>
+                                <span class="text-emerald-600 dark:text-emerald-400">{{ Math.round(nutritionStats.totalCarbs) }}g C</span>
+                                <span class="text-amber-600 dark:text-amber-400">{{ Math.round(nutritionStats.totalFat) }}g F</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Charts -->
                 <div class="space-y-8">
-                    <!-- Calories Chart -->
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Calories by Day</h3>
-                        <div ref="calorieChart" class="w-full overflow-hidden"></div>
-                        <div v-if="nutritionStats.caloriesByDay.length === 0" class="text-center text-gray-500 py-8">
-                            No calorie data for this month
+                    <!-- Calories & Weight Charts -->
+                    <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
+                        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Calories by Day</h3>
+                            <div ref="calorieChart" class="w-full overflow-hidden"></div>
+                            <div v-if="nutritionStats.caloriesByDay.length === 0" class="flex flex-col items-center gap-2 py-12 text-gray-400 dark:text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 16l4-4 3 3 5-6" />
+                                </svg>
+                                <p class="text-sm">No calorie data for this month</p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Weight Chart -->
-                    <div class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Weight by Day</h3>
-                        <div ref="weightChart" class="w-full overflow-hidden"></div>
-                        <div v-if="weightStats.weightByDay.length === 0" class="text-center text-gray-500 py-8">
-                            No weight data for this month
+                        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+                            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Weight by Day</h3>
+                            <div ref="weightChart" class="w-full overflow-hidden"></div>
+                            <div v-if="weightStats.weightByDay.length === 0" class="flex flex-col items-center gap-2 py-12 text-gray-400 dark:text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 16l4-4 3 3 5-6" />
+                                </svg>
+                                <p class="text-sm">No weight data for this month</p>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Macro Charts -->
-                    <div v-if="nutritionStats.macrosByDay.length > 0" class="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+                    <div v-if="nutritionStats.macrosByDay.length > 0" class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Macro Charts</h3>
                             <div class="flex gap-2">

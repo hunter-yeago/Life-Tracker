@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -8,6 +8,17 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
+const desktopNav = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+    // Keep keyboard focus on the active nav link after navigating so users
+    // can tab straight to the next nav item without retracing the whole bar.
+    if (document.activeElement === document.body) {
+        desktopNav.value
+            ?.querySelector<HTMLElement>('a[aria-current="page"]')
+            ?.focus({ preventScroll: true });
+    }
+});
 </script>
 
 <template>
@@ -31,6 +42,7 @@ const showingNavigationDropdown = ref(false);
 
                             <!-- Navigation Links -->
                             <div
+                                ref="desktopNav"
                                 class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
                             >
                                 <NavLink
@@ -56,6 +68,12 @@ const showingNavigationDropdown = ref(false);
                                     :active="route().current('food-types.*')"
                                 >
                                     Food Types
+                                </NavLink>
+                                <NavLink
+                                    :href="route('recipes.index')"
+                                    :active="route().current('recipes.*')"
+                                >
+                                    Recipes
                                 </NavLink>
                                 <NavLink
                                     :href="route('workouts.index')"
@@ -193,6 +211,12 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('food-types.*')"
                         >
                             Food Types
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('recipes.index')"
+                            :active="route().current('recipes.*')"
+                        >
+                            Recipes
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             :href="route('workouts.index')"

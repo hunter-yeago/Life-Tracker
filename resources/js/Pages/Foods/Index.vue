@@ -95,7 +95,7 @@ const sortedFoods = computed(() => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <!-- Date Filters -->
-                <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <div class="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- Month Selector -->
                         <div>
@@ -140,7 +140,7 @@ const sortedFoods = computed(() => {
                 </div>
 
                 <!-- Daily Totals -->
-                <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <div class="mb-6 rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Totals</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -171,7 +171,7 @@ const sortedFoods = computed(() => {
                 </div>
 
                 <!-- Food Entries -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div class="rounded-xl border border-gray-100 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
                     <div class="p-6">
                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Food Entries</h4>
                         
